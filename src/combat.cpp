@@ -133,5 +133,5 @@ void defend() {
 
 void attack() {
 	for (auto*& s : available)
-		s->move(bases[1]);
+		s->move(inDirection(bases[1], *s, 200));
 }
