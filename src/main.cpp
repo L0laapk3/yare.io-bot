@@ -1,34 +1,24 @@
-#include <string>
+
+#include "interface.h"
+#include "objects.h"
+#include "combat.h"
+#include "farm.h"
+#include "printf.h"
 
 
-#define IMPORT(module, name) __attribute__((import_module(module), import_name(name)))
-#define EXPORT(name) __attribute__((export_name(name)))
 
-
-IMPORT("spirits", "energizeBase") void energizeBase(int, int);
-IMPORT("spirits", "move") void move(int, float, float);
-IMPORT("spirits", "count") int count();
-IMPORT("spirits", "isFriendly") bool isFriendly(int);
-IMPORT("spirits", "shout") void shout(int, const char*);
-
-IMPORT("bases", "positionX") float basePositionX(int);
-IMPORT("bases", "positionY") float basePositionY(int);
-
-IMPORT("console", "log") void log(const char*);
-
-
+bool attacking = false;
 
 EXPORT("tick")
-void tick() {
-	log("cpp is awesome!");
+void tick(int currentTick) {
+	parseTick(currentTick);
+	processAttacks();
+	defend();
 
-	auto baseX = basePositionX(0);
-	auto baseY = basePositionY(0);
-	for (int i = 0; i < count(); i++) {
-		if (isFriendly(i)) {
-			shout(i, "cpp 💖");
-			move(i, baseX, baseY);
-			energizeBase(i, 0);
-		}
-	}
+	if (myStrength > enemyStrength * 1.1 + 10)
+		attacking = true;
+	if (attacking)
+		attack();
+	else
+		farm();
 }
