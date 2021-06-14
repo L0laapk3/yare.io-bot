@@ -60,17 +60,18 @@ void farm() {
 
 		for (auto it = available.begin(); it < farmers1End; it++) {
 			auto* s = *it;
-			if (s->db <= 200)
+			// s->shout("🚜");
+			if (s->db <= 200) {
 				s->move(P1);
-			else {
+				if (!s->energy)
+					loss1++;
+				if (!s->usedEnergize && s->db <= 200 && bases[0].energy < bases[0].energyCapacity)
+					s->energizeBase(bases[0]);
+			} else {
 				s->move(bases[0]);
 				// move it to start of farmers2 and fix sizes
 				std::rotate(it, it + 1, farmers1End--);
 			}
-			if (!s->energy)
-				loss1++;
-			if (!s->usedEnergize && s->db <= 200 && bases[0].energy < bases[0].energyCapacity)
-				s->energizeBase(bases[0]);
 		}
 
 		std::sort(available.begin(), farmers1End, [](auto*& a, auto*& b){
@@ -78,6 +79,7 @@ void farm() {
 		});
 		for (auto it = available.end(); it-- != farmers1End; ) {
 			auto* s = *it;
+			// s->shout("🚜");
 			float d2a = dist(*s, haulA);
 			float d2b = dist(*s, P2B);
 

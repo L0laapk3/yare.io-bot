@@ -7,9 +7,9 @@
 
 
 enum Shape {
-	circle = 0,
-	square = 1,
-	triangle = 2,
+	Circle = 0,
+	Square = 1,
+	Triangle = 2,
 };
 
 

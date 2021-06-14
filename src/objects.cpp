@@ -110,7 +110,7 @@ Object::operator Position() {
 
 
 float Spirit::strength() {
-	return size * (shape == Shape::square ? 112.f/200.f : 1.f);
+	return size * (shape == Shape::Square ? 112.f/200.f : 1.f);
 }
 
 

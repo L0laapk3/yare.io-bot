@@ -15,8 +15,8 @@ void tick(int currentTick) {
 	processAttacks();
 	defend();
 
-	if (myStrength > enemyStrength * 1.1 + 10)
-		attacking = true;
+	// if (myStrength > enemyStrength * 1.1f + 20.f || units.size() >= 500)
+	// 	attacking = true;
 	if (attacking)
 		attack();
 	else

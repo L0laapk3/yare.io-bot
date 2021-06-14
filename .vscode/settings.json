@@ -73,6 +73,7 @@
 		"queue": "cpp",
 		"stack": "cpp",
 		"map": "cpp",
-		"__tree": "cpp"
+		"__tree": "cpp",
+		"filesystem": "cpp"
 	}
 }
