@@ -126,15 +126,18 @@ void defend() {
 
 			if (minCost != std::numeric_limits<float>::infinity()) {
 				auto*& s = *best;
-				available.erase(best);
 				defenders.push_back(s);
+				available.erase(best);
 
 				attackStrength -= s->strength();
 
 				auto interceptPos = isStill ? t : t + velDir * minDist;
 
-				// s->move(interceptPos);
-				moveCombatAdvantage(*s, interceptPos);
+				// todo: grouping
+				if (t.db < 450)
+					s->move(interceptPos);
+				else
+					s->move(inDirection(interceptPos, *s, 200));
 				
 			} else
 				break; // cannot find any more defenders
