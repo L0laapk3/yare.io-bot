@@ -199,7 +199,6 @@ void addSweepPoint(float A, float B, float strength) {
 void moveCombatAdvantage(MySpirit& s, const Position& targetPosition) {
 
 	constexpr float moveDist = 20;
-	constexpr float attackDist = 220.1;
 	constexpr float targetWeight = -0.1 / (2*moveDist);
 
 	angles.clear();
@@ -230,25 +229,29 @@ void moveCombatAdvantage(MySpirit& s, const Position& targetPosition) {
 		}
 	}
 	for (auto& other : enemies) {
+		constexpr float attackDist = 220.1f;
 		float d = dist(s, other);
 		float strength = other.strength();
-		if (d >= attackDist + 2 * moveDist)
+		if (d >= attackDist + moveDist)
 			continue; // never in range
 			
 		currentStrength -= strength;
 
-		if (d <= attackDist) 
+		if (d <= attackDist - moveDist) 
 			continue; // always in range
 
-		float B = acosf((d - attackDist) / (2*moveDist));
+		float B = acosf((d - attackDist - moveDist) / (2*moveDist));
 		float A = atan2(other - s);
 		addSweepPoint<false>(A, B, strength);
 	}
 
 	for (auto& outpost : outposts) {
+		if (outpost.energy <= 0)
+			continue;
+		float attackDist = outpost.range + .1f;
 		float d = dist(s, outpost);
 
-		if (d >= outpost.range + moveDist)
+		if (d >= attackDist + moveDist)
 			continue; // never in range
 		
 		float strength = outpost.strength();
@@ -262,7 +265,7 @@ void moveCombatAdvantage(MySpirit& s, const Position& targetPosition) {
 		}
 
 		
-		float B = acosf((d - outpost.range - moveDist) / (2*moveDist));
+		float B = acosf((d - attackDist - moveDist) / (2*moveDist));
 		float A = atan2(outpost - s);
 		if (outpost.isFriendly())
 			addSweepPoint<true>(A, B, strength);

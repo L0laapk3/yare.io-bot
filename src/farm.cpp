@@ -45,7 +45,7 @@ void farmStar(std::vector<MySpirit*>& farmers, Star& star, bool preserve) {
 
 	Position P2B;
 	Outpost& outpost = outposts[0];
-	println("%i %i %i", dist(outpost, star) <= outpost.range, outpost.energy, outpost.isFriendly());
+	// println("%i %i %i", dist(outpost, star) <= outpost.range, outpost.energy, outpost.isFriendly());
 	if (dist(outpost, star) <= outpost.range && outpost.energy > 0 && !outpost.isFriendly()) {
 		float d = norm(star - outpost);
 		if (d + 199.9f <= outpost.range)
@@ -184,7 +184,7 @@ void farmStar(std::vector<MySpirit*>& farmers, Star& star, bool preserve) {
 				auto* s = *f1it;
 				
 				if (!s->usedMove)
-					s->move(dist(transferTo, *s) > 200 ? transferTo : afkPoint);
+					s->move(dist(transferTo, *s) > 200 ? inDirection(transferTo, *s, 199.9f) : afkPoint);
 			}
 		}
 	}
@@ -196,7 +196,7 @@ void farmStar(std::vector<MySpirit*>& farmers, Star& star, bool preserve) {
 
 		if (!s->usedMove) {
 			if (s->energy == 0 || (s->energy < s->energyCapacity && (dist(star, *s) <= 200 || d2a > s->energy * 20))) {
-				s->move(dist(star, *s) > 200 && s->energy > 0 ? star : P2B);
+				s->move(dist(star, *s) > 200 && s->energy > 0 ? inDirection(star, *s, 199.9f) : P2B);
 			} else {
 				bool tempf1 = false;
 				if (s->energy != 0 && s->db <= 200 && farmers1End == available.begin()) {
@@ -210,7 +210,7 @@ void farmStar(std::vector<MySpirit*>& farmers, Star& star, bool preserve) {
 				if (tempf1)
 					s->move(inDirection(bases[0], star, 199.9f));
 				else
-					s->move(dist(*s, targetA) > 200 && s->energy > 0 ? targetA : haulA);
+					s->move(dist(*s, targetA) > 200 && s->energy > 0 ? inDirection(targetA, *s, 199.9f) : haulA);
 			}
 		}
 	}

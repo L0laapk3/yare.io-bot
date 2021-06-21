@@ -75,6 +75,8 @@ struct MySpirit : public Spirit {
 	void energizeBase(Base&);
 	void attackBase(Base&);
 	void _energizeBase(const Base&);
+	void energizeOutpost(Outpost&);
+	void _energizeOutpost(const Outpost&);
 	void move(const Position&);
 	void merge(const Spirit&);
 	void divide();
