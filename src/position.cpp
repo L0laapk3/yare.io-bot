@@ -41,3 +41,10 @@ float atan2(const Position& u) {
 Position fromAngle(const float angle) {
 	return { cosf(angle), sinf(angle) };
 }
+Position rot90(const Position& u) {
+	return { -u.y, u.x };
+}
+Position rot90(const Position& u, const Position& dir) {
+	auto v = rot90(u);
+	return dot(v, { -u.y, u.x }) >= 0 ? v : v * -1;
+}

@@ -9,12 +9,14 @@
 
 
 int currentTick = 0;
+int myPlayerId;
 
 float myStrength;
 float enemyStrength;
 
 std::vector<Star> stars;
 std::vector<Base> bases;
+std::vector<Outpost> outposts;
 std::vector<MySpirit> units;
 std::vector<MySpirit*> available;
 std::vector<EnemySpirit> enemies;
@@ -25,6 +27,7 @@ void parseTick(int tick) {
 	currentTick = tick;
 	myStrength = 0;
 	enemyStrength = 0;
+	myPlayerId = Interface::Player::me();
 	stars.clear();
 	bases.clear();
 	units.clear();
@@ -32,57 +35,77 @@ void parseTick(int tick) {
 	enemies.clear();
 	enemiesSort.clear();
 
-	int bCount = Interface::baseCount();
+	int bCount = Interface::Base::count();
 	for (int i = 0; i < bCount; i++) {
-		if (Interface::baseHp(i) <= 0)
+		if (Interface::Base::hp(i) <= 0)
 			continue;
 		Base base{
-			{ Interface::basePositionX(i), Interface::basePositionY(i) },
+			Interface::Base::position(i),
 			.index = i,
-			.size = Interface::baseSize(i),
-			.energyCapacity = Interface::baseEnergyCapacity(i),
-			.energy = Interface::baseEnergy(i),
-			.spiritCost = Interface::baseCurrentSpiritCost(i),
+			.energyCapacity = Interface::Base::energyCapacity(i),
+			.energy = Interface::Base::energy(i),
+			.spiritCost = Interface::Base::currentSpiritCost(i),
+			.playerId = Interface::Base::playerId(i),
 		};
 		if (base.energy >= base.spiritCost)
 			base.energy -= base.spiritCost;
-		bases.push_back(base);
+
+		if (base.playerId == myPlayerId)
+			bases.insert(bases.begin(), base);
+		else
+			bases.push_back(base);
 	}
 
-	int stCount = Interface::starCount();
-	for (int i = 0; i < stCount; i++) {
-		stars.push_back({
-			{ Interface::starPositionX(i), Interface::starPositionY(i) },
+	int oCount = Interface::Outpost::count();
+	for (int i = 0; i < oCount; i++) {
+		outposts.emplace_back(Outpost{
+			Interface::Outpost::position(i),
+			.energyCapacity = Interface::Outpost::energyCapacity(i),
+			.energy = Interface::Outpost::energy(i),
+			.range = Interface::Outpost::range(i),
+			.controlledBy = Interface::Outpost::controlledBy(i),
 		});
+	}
+
+	int stCount = Interface::Star::count();
+	for (int i = 0; i < stCount; i++) {
+		Star star{
+			Interface::Star::position(i),
+			.energyCapacity = 1000,//Interface::Star::energyCapacity(i),
+			.energy = Interface::Star::energy(i),
+		};
+		star.activatesIn = star.energy == 0 ? 100 - currentTick : 0;
+		stars.emplace_back(star);
 	}
 	std::sort(stars.begin(), stars.end(), [&](auto& a, auto& b){
 		return dist(a, bases[0]) < dist(b, bases[0]);
 	});
 
-	int sCount = Interface::spiritCount();
+	int sCount = Interface::Spirit::count();
 	for (int i = 0; i < sCount; i++) {
-		if (Interface::spiritHp(i) <= 0)
+		if (Interface::Spirit::hp(i) <= 0)
 			continue;
 		Spirit spirit{
-			{ Interface::spiritPositionX(i), Interface::spiritPositionY(i) },
+			Interface::Spirit::position(i),
 			.index = i,
-			.size = Interface::spiritSize(i),
-			.shape = Interface::spiritShape(i),
-			.energyCapacity = Interface::spiritEnergyCapacity(i),
-			.energy = Interface::spiritEnergy(i),
-			.id = Interface::spiritId(i),
+			.size = Interface::Spirit::size(i),
+			.shape = Interface::Spirit::shape(i),
+			.energyCapacity = Interface::Spirit::energyCapacity(i),
+			.energy = Interface::Spirit::energy(i),
+			.id = Interface::Spirit::id(i),
 		};
 		spirit.db = dist(spirit, bases[0]);
 		spirit.ds = dist(spirit, stars[0]);
-		spirit.deb = dist(spirit, bases[1]);
-		spirit.des = dist(spirit, stars[1]);
+		spirit.deb = dist(spirit, bases[bCount-1]);
+		spirit.des = dist(spirit, stars[stCount-1]);
 
-		if (Interface::spiritIsFriendly(i)) {
-			myStrength += spirit.strength();
+		if (Interface::Spirit::playerId(i) == myPlayerId) {
+			myStrength += spirit.maxStrength();
 			auto& mySpirit = units.emplace_back(MySpirit{ spirit });
-			mySpirit._energize(spirit); // default action
+			if (mySpirit.energy < mySpirit.energyCapacity)
+				mySpirit._energize(spirit); // default action
 		} else {
-			enemyStrength += spirit.strength();
+			enemyStrength += spirit.maxStrength();
 			const auto& lastPosIt = lastEnemyPositions.find(spirit.id);
 			auto& enemySpirit = enemies.emplace_back(EnemySpirit{
 				spirit,
@@ -109,13 +132,24 @@ Object::operator Position() {
 }
 
 
+float Outpost::strength() {
+	return energy;
+}
+bool Outpost::isFriendly() {
+	return controlledBy == myPlayerId;
+}
+
 float Spirit::strength() {
-	return size * (shape == Shape::Square ? 112.f/200.f : 1.f);
+	return energy * (shape == Shape::Square ? 112.f/200.f : 1.f);
+}
+float Spirit::maxStrength() {
+	return energyCapacity * (shape == Shape::Square ? 112.f/200.f : 1.f);
 }
 
 
-void MySpirit::charge() {
+void MySpirit::charge(Star& s) {
 	_energize(*this);
+	s.energy -= size;
 	energy = std::min(energy + size, energyCapacity);
 	usedEnergize = true;
 }
@@ -146,24 +180,24 @@ void MySpirit::attackBase(Base& b) {
 
 
 void MySpirit::_energize(const Spirit& s) {
-	Interface::spiritEnergize(index, s.index);
+	Interface::Spirit::energize(index, s.index);
 }
 void MySpirit::_energizeBase(const Base& b) {
-	Interface::spiritEnergizeBase(index, b.index);
+	Interface::Spirit::energizeBase(index, b.index);
 }
 void MySpirit::move(const Position& p) {
-	Interface::spiritMove(index, p.x, p.y);
+	Interface::Spirit::move(index, p.x, p.y);
 	usedMove = true;
 }
 void MySpirit::merge(const Spirit& s) {
-	Interface::spiritMerge(index, s.index);
+	Interface::Spirit::merge(index, s.index);
 }
 void MySpirit::divide() {
-	Interface::spiritDivide(index);
+	Interface::Spirit::divide(index);
 }
 void MySpirit::jump(const Position& p) {
-	Interface::spiritJump(index, p.x, p.y);
+	Interface::Spirit::jump(index, p.x, p.y);
 }
 void MySpirit::shout(const char* str) {
-	Interface::spiritShout(index, str);
+	Interface::Spirit::shout(index, str);
 }

@@ -859,7 +859,7 @@ static int _vsnprintf(out_fct_type out, char* buffer, const size_t maxlen, const
 
 
 
-char buffer[256];
+char buffer[4096];
 int bufferI = 0;
 void print(const char* format, ...)
 {
@@ -874,7 +874,7 @@ void println(const char* format, ...)
   va_start(va, format);
   bufferI += _vsnprintf(_out_buffer, &buffer[bufferI], 256 - bufferI, format, va);
   va_end(va);
-  Interface::log(buffer);
+  Interface::Console::log(buffer);
   bufferI = 0;
 }
 

@@ -8,40 +8,70 @@
 #define EXPORT(name) __attribute__((export_name(name)))
 
 namespace Interface {
-	IMPORT("spirits", "count") int spiritCount();
-	IMPORT("spirits", "isFriendly") bool spiritIsFriendly(int);
-	IMPORT("spirits", "position") Position spiritPosition(int);
-	IMPORT("spirits", "positionX") float spiritPositionX(int);
-	IMPORT("spirits", "positionY") float spiritPositionY(int);
-	IMPORT("spirits", "size") int spiritSize(int);
-	IMPORT("spirits", "shape") Shape spiritShape(int);
-	IMPORT("spirits", "energyCapacity") int spiritEnergyCapacity(int);
-	IMPORT("spirits", "energy") int spiritEnergy(int);
-	IMPORT("spirits", "id") int spiritId(int);
-	IMPORT("spirits", "hp") int spiritHp(int);
+	namespace Spirit {
+		IMPORT("spirits", "count") int count();
+		IMPORT("spirits", "positionX") float positionX(int);
+		IMPORT("spirits", "positionY") float positionY(int);
+		// IMPORT("spirits", "position") Position position(int);
+		inline Position position(int i) { return Position{ positionX(i), positionY(i) }; }
+		IMPORT("spirits", "size") int size(int);
+		IMPORT("spirits", "shape") Shape shape(int);
+		IMPORT("spirits", "energyCapacity") int energyCapacity(int);
+		IMPORT("spirits", "energy") int energy(int);
+		IMPORT("spirits", "id") int id(int);
+		IMPORT("spirits", "playerId") int playerId(int);
+		IMPORT("spirits", "hp") int hp(int);
 
-	IMPORT("spirits", "energize") void spiritEnergize(int, int);
-	IMPORT("spirits", "energizeBase") void spiritEnergizeBase(int, int);
-	IMPORT("spirits", "move") void spiritMove(int, float, float);
-	IMPORT("spirits", "merge") void spiritMerge(int, int);
-	IMPORT("spirits", "divide") void spiritDivide(int);
-	IMPORT("spirits", "jump") void spiritJump(int, float, float);
-	IMPORT("spirits", "shout") void spiritShout(int, const char*);
+		IMPORT("spirits", "energize") void energize(int, int);
+		IMPORT("spirits", "energizeBase") void energizeBase(int, int);
+		IMPORT("spirits", "move") void move(int, float, float);
+		IMPORT("spirits", "merge") void merge(int, int);
+		IMPORT("spirits", "divide") void divide(int);
+		IMPORT("spirits", "jump") void jump(int, float, float);
+		IMPORT("spirits", "shout") void shout(int, const char*);
+	};
 
-	IMPORT("bases", "count") int baseCount();
-	IMPORT("bases", "position") Position basePosition(int);
-	IMPORT("bases", "positionX") float basePositionX(int);
-	IMPORT("bases", "positionY") float basePositionY(int);
-	IMPORT("bases", "size") int baseSize(int);
-	IMPORT("bases", "energyCapacity") int baseEnergyCapacity(int);
-	IMPORT("bases", "energy") int baseEnergy(int);
-	IMPORT("bases", "currentSpiritCost") int baseCurrentSpiritCost(int);
-	IMPORT("bases", "hp") int baseHp(int);
+	namespace Base {
+		IMPORT("bases", "count") int count();
+		IMPORT("bases", "positionX") float positionX(int);
+		IMPORT("bases", "positionY") float positionY(int);
+		// IMPORT("bases", "position") Position position(int);
+		inline Position position(int i) { return Position{ positionX(i), positionY(i) }; }
+		IMPORT("bases", "energyCapacity") int energyCapacity(int);
+		IMPORT("bases", "energy") int energy(int);
+		IMPORT("bases", "currentSpiritCost") int currentSpiritCost(int);
+		IMPORT("bases", "hp") int hp(int);
+		IMPORT("bases", "playerId") int playerId(int);
+	};
 
-	IMPORT("stars", "count") int starCount();
-	IMPORT("stars", "position") Position starPosition(int);
-	IMPORT("stars", "positionX") float starPositionX(int);
-	IMPORT("stars", "positionY") float starPositionY(int);
+	namespace Star {
+		IMPORT("stars", "count") int count();
+		IMPORT("stars", "positionX") float positionX(int);
+		IMPORT("stars", "positionY") float positionY(int);
+		// IMPORT("stars", "position") Position position(int);
+		inline Position position(int i) { return Position{ positionX(i), positionY(i) }; }
+		IMPORT("stars", "energyCapacity") int energyCapacity(int);
+		IMPORT("stars", "energy") int energy(int);
+	};
 
-	IMPORT("console", "log") void log(const char*);
+	namespace Outpost {
+		IMPORT("outposts", "count") int count();
+		IMPORT("outposts", "positionX") float positionX(int);
+		IMPORT("outposts", "positionY") float positionY(int);
+		// IMPORT("outposts", "position") Position position(int);
+		inline Position position(int i) { return Position{ positionX(i), positionY(i) }; }
+		IMPORT("outposts", "energyCapacity") int energyCapacity(int);
+		IMPORT("outposts", "energy") int energy(int);
+		IMPORT("outposts", "range") float range(int);
+		IMPORT("outposts", "controlledBy") int controlledBy(int);
+	};
+
+	namespace Player {
+		IMPORT("players", "count") int count();
+		IMPORT("players", "me") int me();
+	};
+
+	namespace Console {
+		IMPORT("console", "log") void log(const char*);
+	};
 };

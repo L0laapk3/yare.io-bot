@@ -17,3 +17,5 @@ float dist(const Position& u, const Position& v);
 Position inDirection(const Position& u, const Position& v, const float d);
 float atan2(const Position& u);
 Position fromAngle(const float angle);
+Position rot90(const Position& u);
+Position rot90(const Position& u, const Position& dir);

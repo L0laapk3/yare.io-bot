@@ -19,14 +19,27 @@ struct Object {
 };
 
 struct Star : public Object {
+	int energyCapacity;
+	int energy;
+	int activatesIn;
 };
 
 struct Base : public Object {
 	int index;
-	int size;
 	int energyCapacity;
 	int energy;
 	int spiritCost;
+	int playerId;
+};
+
+struct Outpost : public Object {
+	int energyCapacity;
+	int energy;
+	float range;
+	int controlledBy;
+
+	float strength();
+	bool isFriendly();
 };
 
 struct Spirit : public Object {
@@ -43,6 +56,7 @@ struct Spirit : public Object {
 	float des;
 
 	float strength();
+	float maxStrength();
 };
 
 
@@ -54,7 +68,7 @@ struct MySpirit : public Spirit {
 	bool usedEnergize = false;
 	bool usedMove = false;
 
-	void charge();
+	void charge(Star&);
 	void attack(EnemySpirit&);
 	void energize(MySpirit&);
 	void _energize(const Spirit&);
@@ -69,18 +83,21 @@ struct MySpirit : public Spirit {
 };
 
 
-extern float myStrength;
-extern float enemyStrength;
-
+extern int myPlayerId;
 extern int currentTick;
 
 extern std::vector<Star> stars;
 extern std::vector<Base> bases;
+extern std::vector<Outpost> outposts;
 extern std::vector<MySpirit> units;
 extern std::vector<MySpirit*> available;
 extern std::vector<EnemySpirit> enemies;
 extern std::vector<EnemySpirit*> enemiesSort;
 extern std::map<int, Position> lastEnemyPositions;
+
+extern float myStrength;
+extern float enemyStrength;
+
 
 void parseTick(int tick);
 
