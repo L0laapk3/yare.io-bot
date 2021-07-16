@@ -46,14 +46,15 @@ void farmStar(std::vector<MySpirit*>& farmers, Star& star, bool preserve) {
 	Position P2B;
 	Outpost& outpost = outposts[0];
 	// println("%i %i %i", dist(outpost, star) <= outpost.range, outpost.energy, outpost.isFriendly());
-	if (dist(outpost, star) <= outpost.range && outpost.energy > 0 && !outpost.isFriendly()) {
-		float d = norm(star - outpost);
-		if (d + 199.9f <= outpost.range)
+	float oRange = outpost.range + .1f;
+	if (dist(outpost, star) <= oRange && outpost.energy > 0 && !outpost.isFriendly()) {
+		auto os = star - outpost;
+		float d = norm(os);
+		if (d + 199.9f <= oRange)
 			return;
-		auto dir = normalize(star - outpost);
-		float projLen = outpost.range + .1f - d;
-		P2B = star + projLen * dir + sqrtf(199.9f*199.9f - projLen*projLen) * rot90(dir, bases[0] - star);
-		println("%f %f", projLen, d);
+		auto proj = os * (oRange*oRange - 199.9f*199.f - dot(os, os)) / (2 * dot(os, os));
+		auto orth = sqrtf(199.9f*199.9f - dot(proj, proj)) * rot90(normalize(os), bases[0] - star);
+		P2B = star + proj + orth;
 	} else
 		P2B = star + normalize(bases[0] - star) * 199.9f;
 

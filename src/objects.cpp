@@ -30,6 +30,7 @@ void parseTick(int tick) {
 	myPlayerId = Interface::Player::me();
 	stars.clear();
 	bases.clear();
+	outposts.clear();
 	units.clear();
 	available.clear();
 	enemies.clear();

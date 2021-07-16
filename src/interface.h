@@ -28,6 +28,7 @@ namespace Interface {
 		IMPORT("spirits", "merge") void merge(int, int);
 		IMPORT("spirits", "divide") void divide(int);
 		IMPORT("spirits", "jump") void jump(int, float, float);
+		IMPORT("spirits", "explode") void explode(int);
 		IMPORT("spirits", "shout") void shout(int, const char*);
 	};
 
