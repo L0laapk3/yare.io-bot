@@ -15,14 +15,14 @@
 
 int tippingPoint(int numChains, int travelTime, Star& star) {
 	float perfectEfficiency = 10.f / (10 * numChains + 2 * (10 + travelTime));
-	int starEnergyProduction = 3 + (int)std::roundf(star.energyCapacity / 100.f);
-	float e = (starEnergyProduction - 3) * 100 - 50;
+	int starEnergyProduction = Star::energyGenFlat + (int)std::roundf(star.energyCapacity * Star::energyGenScaling);
+	float e = (starEnergyProduction - Star::energyGenFlat) * 100 - 50;
 	int f = starEnergyProduction * numChains + (int)ceilf((float)starEnergyProduction / 10 * 2 * (10 + travelTime));
 	float baseE = 0;
 
 	while (e > star.energy) {
 		float farmConsumption = perfectEfficiency * f;
-		starEnergyProduction = 3 + (int)std::roundf((e - starEnergyProduction + farmConsumption) / 100.f);
+		starEnergyProduction = Star::energyGenFlat + (int)std::roundf((e - starEnergyProduction + farmConsumption) * Star::energyGenScaling);
 		e -= starEnergyProduction;
 		e += farmConsumption;
 		baseE -= farmConsumption;
@@ -33,6 +33,7 @@ int tippingPoint(int numChains, int travelTime, Star& star) {
 		// println("%i %f %f %i", f, e, f * perfectEfficiency, starEnergyProduction);
 	}
 
+	println("%i farmers allowed", f);
 	return f;
 }
 

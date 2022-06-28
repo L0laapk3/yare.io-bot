@@ -14,6 +14,8 @@ struct Object {
 struct Star : public Object {
 	int energyCapacity;
 	int energy;
+	static constexpr int energyGenFlat = 2;
+	static constexpr float energyGenScaling = 2.f / 100.f;
 	int activatesIn;
 };
 
