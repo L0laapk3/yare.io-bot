@@ -1,16 +1,9 @@
 #pragma once
 
-#include "position.h"
+#include "interface.h"
 
 #include <vector>
 #include <map>
-
-
-enum Shape {
-	Circle = 0,
-	Square = 1,
-	Triangle = 2,
-};
 
 
 struct Object {
@@ -29,7 +22,7 @@ struct Base : public Object {
 	int energyCapacity;
 	int energy;
 	int spiritCost;
-	int playerId;
+	int controlledBy;
 };
 
 struct Outpost : public Object {
@@ -102,7 +95,3 @@ extern float enemyStrength;
 
 
 void parseTick(int tick);
-
-
-
-#include "printf.h"

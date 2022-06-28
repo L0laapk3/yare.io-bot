@@ -1,10 +1,10 @@
 #include "objects.h"
 
 #include "interface.h"
+#include "printf.h"
 
 #include <algorithm>
 
-#include "printf.h"
 
 
 
@@ -37,21 +37,20 @@ void parseTick(int tick) {
 	enemiesSort.clear();
 
 	int bCount = Interface::Base::count();
+
 	for (int i = 0; i < bCount; i++) {
-		if (Interface::Base::hp(i) <= 0)
-			continue;
 		Base base{
 			Interface::Base::position(i),
 			.index = i,
 			.energyCapacity = Interface::Base::energyCapacity(i),
 			.energy = Interface::Base::energy(i),
 			.spiritCost = Interface::Base::currentSpiritCost(i),
-			.playerId = Interface::Base::playerId(i),
+			.controlledBy = Interface::Base::controlledBy(i),
 		};
 		if (base.energy >= base.spiritCost)
 			base.energy -= base.spiritCost;
 
-		if (base.playerId == myPlayerId)
+		if (base.controlledBy == myPlayerId)
 			bases.insert(bases.begin(), base);
 		else
 			bases.push_back(base);

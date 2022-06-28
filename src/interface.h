@@ -1,7 +1,12 @@
 #pragma once
 
-#include "objects.h"
+#include "position.h"
 
+enum Shape {
+	Circle = 0,
+	Square = 1,
+	Triangle = 2,
+};
 
 
 #define IMPORT(module, name) __attribute__((import_module(module), import_name(name)))
@@ -41,8 +46,7 @@ namespace Interface {
 		IMPORT("bases", "energyCapacity") int energyCapacity(int);
 		IMPORT("bases", "energy") int energy(int);
 		IMPORT("bases", "currentSpiritCost") int currentSpiritCost(int);
-		IMPORT("bases", "hp") int hp(int);
-		IMPORT("bases", "playerId") int playerId(int);
+		IMPORT("bases", "controlledBy") int controlledBy(int);
 	};
 
 	namespace Star {

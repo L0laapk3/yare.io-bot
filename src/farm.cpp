@@ -78,7 +78,7 @@ void farmStar(std::vector<MySpirit*>& farmers, Star& star, bool preserve) {
 		maxFarmers = std::min(maxFarmers, tippingPoint(numChains, travelTime, star));
 	int farmerCount = std::min<int>(maxFarmers, available.size());
 	auto farmersEnd = available.begin() + farmerCount;
-	println("dist: %f, numChains: %i, travelTime: %i, farmers: %i/%i%s", P2BsDist + 199.9f, numChains, travelTime, farmerCount, maxFarmers, preserve ? "p" : "");
+	// println("dist: %f, numChains: %i, travelTime: %i, farmers: %i/%i%s", P2BsDist + 199.9f, numChains, travelTime, farmerCount, maxFarmers, preserve ? "p" : "");
 	if (farmerCount <= 0)
 		return;
 
