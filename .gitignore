@@ -1,2 +1,3 @@
-wasi-sdk
+wasi-sdk*
+node-modules
 build

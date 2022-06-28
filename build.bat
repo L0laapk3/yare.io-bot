@@ -10,6 +10,7 @@ cls
   -fvisibility=hidden ^
   -std=c++20 ^
   -Ofast ^
+  -Xclang -target-feature -Xclang -bulk-memory ^
   --sysroot="wasi-sdk/share/wasi-sysroot" ^
   "src/*.cpp" -o "build/bot.wasm"
 

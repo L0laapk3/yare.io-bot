@@ -1,25 +1,7 @@
 
 #include "interface.h"
-#include "objects.h"
-#include "combat.h"
-#include "farm.h"
-#include "printf.h"
 
-
-
-bool attacking = false;
-
-EXPORT("tick")
-void tick(int currentTick) {
-
-	parseTick(currentTick);
-	processAttacks();
-	defend();
-
-	if (myStrength > enemyStrength * 1.1f + 200.f || units.size() >= 500 || (!outposts[0].isFriendly() && outposts[0].range > 400.f))
-		attacking = true;
-	if (attacking)
-		attack();
-	else
-		farm();
+float x;
+EXPORT("tick") void tick(int tick, bool initialize) {
+    Interface::Spirit::move(0, 100, x++);
 }

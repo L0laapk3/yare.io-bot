@@ -1,6 +1,12 @@
 #pragma once
 
-#include "objects.h"
+#include "position.h"
+
+enum Shape {
+	Circle = 0,
+	Square = 1,
+	Triangle = 2,
+};
 
 
 
