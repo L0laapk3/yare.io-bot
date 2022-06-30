@@ -65,6 +65,7 @@ struct MySpirit : public Spirit {
 	bool usedEnergize = false;
 	bool usedMove = false;
 
+// interface
 	void charge(Star&);
 	void attack(EnemySpirit&);
 	void energize(MySpirit&);
@@ -82,6 +83,9 @@ struct MySpirit : public Spirit {
 	void _energize(const Spirit&);
 	void _energizeBase(const Base&);
 	void _energizeOutpost(const Outpost&);
+
+// self defined functions
+	void safeMove(const Position& to);
 };
 
 

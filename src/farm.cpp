@@ -13,23 +13,33 @@
 
 
 
-int tippingPoint(Shape shape, int numChains, int travelTime, Star& star, bool greedy) {
-	// start off at max energy and simulate backwards
+float farmEfficiency(int numChains, int travelTime) {
+	return 10.f / (10 * numChains + 2 * (10 + travelTime)); // ideal case, energy harvested per spirit per tick
+}
+float farmEfficiency(ChargeTarget& target, Star& star) {
+	Position P2B = star + normalize(target - star) * 199.9f;;
+	float P2BsDist = dist(target, P2B);
+	int numChains = ceilf((P2BsDist - 19.9f * 6) / 199.9f - 1);
+	int travelTime = std::max((int)ceilf((P2BsDist - 199.9f * (1 + numChains)) / 19.9f) - 1, 0);
+	return farmEfficiency(numChains, travelTime);
+}
 
-	float perfectEfficiency = 10.f / (10 * numChains + 2 * (10 + travelTime)); // ideal case, energy harvested per spirit per tick
+
+int tippingPoint(Shape shape, float farmEfficiency, Star& star, bool greedy) {
+	// start off at max energy and simulate backwards
 
 	if (greedy) {
 		int starEnergyProduction = star.energyGenFlat + (int)std::roundf(star.energy * star.energyGenScaling);
-		return starEnergyProduction / perfectEfficiency;
+		return starEnergyProduction / farmEfficiency;
 	}
 
 	int starEnergyProduction = star.energyGenFlat + (int)std::roundf(star.energyCapacity * star.energyGenScaling);
-	int farmers = starEnergyProduction / perfectEfficiency; // number of farmers needed to harvest the full energy production
-	float energy = star.energyCapacity;
+	int farmers = starEnergyProduction / farmEfficiency; // number of farmers needed to harvest the full energy production
+	float energy = star.energyCapacity - Base::spiritCost(shape, farmers);
 	float spawnEnergy = 0;
 
 	while (energy > star.energy) {
-		float farmConsumption = perfectEfficiency * farmers;
+		float farmConsumption = farmEfficiency * farmers;
 		starEnergyProduction = star.energyGenFlat + (int)std::roundf((energy - starEnergyProduction + farmConsumption) * star.energyGenScaling);
 		energy -= starEnergyProduction;
 		energy += farmConsumption;
@@ -81,7 +91,7 @@ void farmStar(std::vector<MySpirit*>& farmers, T& target, Star& star, bool greed
 	float perfectEfficiency = 10.f / (10 * numChains + farmer2CycleTime);
 
 	int starEnergyProduction = star.energyGenFlat + (int)std::roundf(star.energy * star.energyGenScaling);
-	int maxFarmers = tippingPoint(farmers[0]->shape, numChains, travelTime, star, greedy);
+	int maxFarmers = tippingPoint(farmers[0]->shape, farmEfficiency(numChains, travelTime), star, greedy);
 	int farmerCount = std::min<int>(maxFarmers, farmers.size());
 	auto farmersEnd = farmers.begin() + farmerCount;
 	// println("dist: %f, numChains: %i, travelTime: %i, farmers: %i/%i%s", P2BsDist + 199.9f, numChains, travelTime, farmerCount, maxFarmers, preserve ? "p" : "");
@@ -195,7 +205,7 @@ void farmStar(std::vector<MySpirit*>& farmers, T& target, Star& star, bool greed
 				auto* s = *f1it;
 				
 				if (!s->usedMove)
-					s->move(dist(transferTo, *s) > 200 ? inDirection(transferTo, *s, 199.9f) : afkPoint);
+					s->safeMove(dist(transferTo, *s) > 200 ? inDirection(transferTo, *s, 199.9f) : afkPoint);
 			}
 		}
 	}
@@ -207,7 +217,7 @@ void farmStar(std::vector<MySpirit*>& farmers, T& target, Star& star, bool greed
 
 		if (!s->usedMove) {
 			if (s->energy == 0 || (s->energy < s->energyCapacity && (dist(star, *s) <= 200 || d2a > s->energy * 20))) {
-				s->move(dist(star, *s) > 200 && s->energy > 0 ? inDirection(star, *s, 199.9f) : P2B);
+				s->safeMove(dist(star, *s) > 200 && s->energy > 0 ? inDirection(star, *s, 199.9f) : P2B);
 			} else {
 				bool tempf1 = false;
 				if (s->energy != 0 && dist(*s, target) <= 200 && farmers1End == farmers.begin()) {
@@ -219,9 +229,9 @@ void farmStar(std::vector<MySpirit*>& farmers, T& target, Star& star, bool greed
 						}
 				}
 				if (tempf1)
-					s->move(inDirection(target, star, 199.9f));
+					s->safeMove(inDirection(target, star, 199.9f));
 				else
-					s->move(dist(*s, targetA) > 200 && s->energy > 0 ? inDirection(targetA, *s, 199.9f) : haulA);
+					s->safeMove(dist(*s, targetA) > 200 && s->energy > 0 ? inDirection(targetA, *s, 199.9f) : haulA);
 			}
 		}
 	}
@@ -235,7 +245,7 @@ void farmStar(std::vector<MySpirit*>& farmers, T& target, Star& star, bool greed
 struct BaseStar {
 	Star* star;
 	Base* base;
-	Position middle;
+	float efficiency;
 	std::vector<MySpirit*> closestSpirits;
 };
 
@@ -256,18 +266,19 @@ void farm() {
 				pair.base = &base;
 			}
 		}
-		pair.middle = (*pair.star + *pair.base) / 2;
+
+		pair.efficiency = farmEfficiency(*pair.base, *pair.star);
 	}
 
 	auto assignSpriritsToClosestPair = [&](std::vector<MySpirit*> spirits) {
 		for (auto& s : spirits) {
 			BaseStar* closestPair = nullptr;
 			float closestPairDist = std::numeric_limits<float>::max();
-			for (auto& p : baseStarPairs) {
-				float d = dist(p.middle, *s);
+			for (auto& pair : baseStarPairs) {
+				float d = (dist(*pair.base, *s) + dist(*pair.star, *s)) * pair.efficiency;
 				if (d < closestPairDist) {
 					closestPairDist = d;
-					closestPair = &p;
+					closestPair = &pair;
 				}
 			}
 			closestPair->closestSpirits.push_back(s);

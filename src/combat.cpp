@@ -72,9 +72,9 @@ void attackOrCharge(MySpirit& s, const Position& target) {
 		s.charge(*closestStar);
 
 	if (std::max(closestStarDistance - 200, 1.f) * s.energy < std::max(dist(s, target) - 200, 1.f) * (s.energyCapacity - s.energy))
-		moveCombatAdvantage(s, inDirection(*closestStar, closestStarDistance > 180 ? s : target, 179.9));
+		s.safeMove(inDirection(*closestStar, closestStarDistance > 180 ? s : target, 179.9));
 	else
-		moveCombatAdvantage(s, inDirection(target, s, 179.9));
+		s.safeMove(inDirection(target, s, 179.9));
 }
 
 
@@ -234,12 +234,12 @@ void addSweepPoints(float A, float B, float strength) {
 }
 
 
-void moveCombatAdvantage(MySpirit& s, const Position& targetPosition) {
+void MySpirit::safeMove(const Position& targetPosition) {
 
 	static constexpr float MAX_MOVE_DIST = 20;
 	static constexpr float TARGET_WEIGHT = -0.1f / (2*MAX_MOVE_DIST);
 
-	float targetAngle = atan2(targetPosition - s);
+	float targetAngle = atan2(targetPosition - *this);
 
 	angles.clear();
 	angles.emplace_back(SweepPoint{
@@ -247,20 +247,20 @@ void moveCombatAdvantage(MySpirit& s, const Position& targetPosition) {
 		.type = SweepPointType::Target,
 	});
 	
-	float currentStrength = s.strength();
+	float currentStrength = strength();
 
 	for (auto it = available.begin(); it != available.end(); it++) {
 		auto*& other = *it;
-		float d = dist(s, *other);
+		float d = dist(*this, *other);
 
-		if (&s != other && d < 2*2*MAX_MOVE_DIST) {
+		if (this != other && d < 2*2*MAX_MOVE_DIST) {
 			float strength = other->strength();
 			if (d == 0) {
 				currentStrength += strength;
 				continue;
 			}
 			float B = acosf(d / (2*2*MAX_MOVE_DIST));
-			float A = atan2(*other - s);
+			float A = atan2(*other - *this);
 			addSweepPoints<true>(A, B, strength);
 			// angles.emplace_back(SweepPoint{
 			// 	.angle = A,
@@ -270,7 +270,7 @@ void moveCombatAdvantage(MySpirit& s, const Position& targetPosition) {
 	}
 	for (auto& other : enemies) {
 		constexpr float attackDist = 200.1f + MAX_MOVE_DIST;
-		float d = dist(s, other);
+		float d = dist(*this, other);
 		float strength = other.strength();
 		if (d >= attackDist + MAX_MOVE_DIST)
 			continue; // never in range
@@ -281,7 +281,7 @@ void moveCombatAdvantage(MySpirit& s, const Position& targetPosition) {
 			continue; // always in range
 
 		float B = acosf((d - attackDist - MAX_MOVE_DIST) / (2*MAX_MOVE_DIST));
-		float A = atan2(other - s);
+		float A = atan2(other - *this);
 		addSweepPoints<false>(A, B, strength);
 	}
 
@@ -289,7 +289,7 @@ void moveCombatAdvantage(MySpirit& s, const Position& targetPosition) {
 		if (outpost.energy <= 0)
 			continue;
 		float attackDist = outpost.range + .1f;
-		float d = dist(s, outpost);
+		float d = dist(outpost, *this);
 
 		if (d >= attackDist + MAX_MOVE_DIST)
 			continue; // never in range
@@ -306,7 +306,7 @@ void moveCombatAdvantage(MySpirit& s, const Position& targetPosition) {
 
 		
 		float B = acosf((d - attackDist - MAX_MOVE_DIST) / (2*MAX_MOVE_DIST));
-		float A = atan2(outpost - s);
+		float A = atan2(outpost - *this);
 		if (outpost.isFriendly())
 			addSweepPoints<true>(A, B, strength);
 		else
@@ -324,7 +324,7 @@ void moveCombatAdvantage(MySpirit& s, const Position& targetPosition) {
 		if (it->type == SweepPointType::Add)
 			currentStrength += it->strength;
 
-		auto nextPos = s + MAX_MOVE_DIST * fromAngle(it->angle);
+		auto nextPos = *this + MAX_MOVE_DIST * fromAngle(it->angle);
 		// print("%f,%f ", it->angle, currentStrength);	
 		float score = std::min(0.f, currentStrength) + TARGET_WEIGHT * dist(nextPos, targetPosition);
 		if (score > bestScore) {
@@ -338,7 +338,7 @@ void moveCombatAdvantage(MySpirit& s, const Position& targetPosition) {
 	// println("d %f", bestAngle);
 
 	if (bestSweepPoint->type == SweepPointType::Target)
-		s.move(targetPosition);
+		move(targetPosition);
 	else {
 		float moveDist;
 		if (std::abs(bestSweepPoint->angle - targetAngle) < M_PI_2 || std::abs(bestSweepPoint->angle - targetAngle) > M_PI + M_PI_2)
@@ -347,6 +347,6 @@ void moveCombatAdvantage(MySpirit& s, const Position& targetPosition) {
 			moveDist = MAX_MOVE_DIST; // TODO
 
 		}
-		s.move(s + (moveDist + 1) * fromAngle(bestSweepPoint->angle));
+		move(*this + (moveDist + 1) * fromAngle(bestSweepPoint->angle));
 	}
 }
