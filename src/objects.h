@@ -15,8 +15,8 @@ struct Star : public Object {
 	int energyCapacity;
 	int energy;
 	int index;
-	static constexpr int energyGenFlat = 2;
-	static constexpr float energyGenScaling = 2.f / 100.f;
+	int energyGenFlat = 2;
+	float energyGenScaling = .02f;
 	int activatesIn;
 };
 
@@ -27,7 +27,9 @@ struct ChargeTarget : public Object {
 };
 struct Base : public ChargeTarget {
 	int index;
-	int spiritCost;
+	static int spiritCost(Shape shape, int totalTeamSpirits);
+	template<Shape shape>
+	static int spiritCost(int totalTeamSpirits);
 };
 
 struct Outpost : public ChargeTarget {

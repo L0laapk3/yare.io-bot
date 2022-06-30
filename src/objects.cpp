@@ -45,10 +45,7 @@ void parseTick(int tick) {
 		base.energy = Interface::Base::energy(i);
 		base.controlledBy = Interface::Base::controlledBy(i);
 		base.index = i;
-		base.spiritCost = Interface::Base::currentSpiritCost(i);
-
-		if (base.energy >= base.spiritCost)
-			base.energy -= base.spiritCost;
+		// base.spiritCost = Interface::Base::currentSpiritCost(i);
 
 		if (base.controlledBy == myPlayerId)
 			bases.insert(bases.begin(), base);
@@ -75,7 +72,9 @@ void parseTick(int tick) {
 			.energy = Interface::Star::energy(i),
 			.index = i
 		};
-		star.activatesIn = star.energy == 0 ? 100 - currentTick : 0;
+		star.activatesIn = 0;
+		star.energyGenFlat = star.energyCapacity == 3000 ? 3 : 2;
+		star.energyGenScaling = star.energyCapacity == 3000 ? .03f : .02f;
 		stars.emplace_back(star);
 	}
 	std::sort(stars.begin(), stars.end(), [&](auto& a, auto& b){
@@ -132,6 +131,44 @@ Object::operator Position() {
 	return position;
 }
 
+
+template<>
+int Base::spiritCost<Shape::Circle>(int spirits) {
+	if (spirits > 200)
+		return 150;
+	if (spirits > 100)
+		return 90;
+	if (spirits > 50)
+		return 50;
+	return 25;
+}
+template<>
+int Base::spiritCost<Shape::Square>(int spirits) {
+	if (spirits > 17)
+		return 700;
+	if (spirits > 10)
+		return 500;
+	return 360;
+}
+template<>
+int Base::spiritCost<Shape::Triangle>(int spirits) {
+	if (spirits > 120)
+		return 300;
+	if (spirits > 30)
+		return 160;
+	return 90;
+}
+int Base::spiritCost(Shape shape, int totalTeamSpirits) {
+	switch (shape) {
+		case Shape::Triangle:
+			return spiritCost<Shape::Triangle>(totalTeamSpirits);
+		case Shape::Square:
+			return spiritCost<Shape::Square>(totalTeamSpirits);
+		// case Shape::Circle:
+		default:
+			return spiritCost<Shape::Circle>(totalTeamSpirits);
+	}
+}
 
 float Outpost::strength() {
 	return energy;
