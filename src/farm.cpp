@@ -42,10 +42,6 @@ template<typename T>
 void farmStar(std::vector<MySpirit*>& farmers, T& target, Star& star, bool preserve) {
 	if (farmers.size() <= 0)
 		return;
-		
-	std::sort(farmers.begin(), farmers.end(), [&](auto*& a, auto*& b) {
-		return dist(star, *a) + dist(*a, target) < dist(star, *b) + dist(*b, target);
-	});
 
 	Position P2B;
 	Outpost& outpost = outposts[0];
@@ -85,9 +81,13 @@ void farmStar(std::vector<MySpirit*>& farmers, T& target, Star& star, bool prese
 	// println("dist: %f, numChains: %i, travelTime: %i, farmers: %i/%i%s", P2BsDist + 199.9f, numChains, travelTime, farmerCount, maxFarmers, preserve ? "p" : "");
 	if (farmerCount <= 0)
 		return;
+		
+	std::partial_sort(farmers.begin(), farmersEnd, farmers.end(), [&](auto*& a, auto*& b) {
+		return dist(*a, target) + dist(star, *a) < dist(*b, target) + dist(*b, star);
+	});
 
 	std::sort(farmers.begin(), farmersEnd, [&](auto*& a, auto*& b){
-		return dist(*a, target) - dist(star, *a) < dist(*b, target) - dist(star, *b);
+		return dist(*a, target) - dist(star, *a) < dist(*b, target) - dist(*b, star);
 	});
 
 	for (auto it = farmers.begin(); it < farmersEnd; it++)
@@ -105,9 +105,9 @@ void farmStar(std::vector<MySpirit*>& farmers, T& target, Star& star, bool prese
 		haulA = P2A;
 		targetA = P1;
 
-		if (currentTick < 14)
+		if (currentTick < 14 && numChains > 0) {
 			count1 = farmerCount / 2 / numChains;
-		else {
+		} else {
 			count1 = std::max(1, (int)std::roundf(farmerCount * perfectEfficiency)) * numChains;
 
 			int oldCount1 = 0;
@@ -275,13 +275,19 @@ void farm() {
 		});
 		auto pair = std::move(baseStarPairs.back());
 		baseStarPairs.pop_back();
-		println("pair star %d: %f %f base %d: %f %f", pair.star->index, pair.star->position.x, pair.star->position.y, pair.base->index, pair.base->position.x, pair.base->position.y);
+
+		int numSpirits = pair.closestSpirits.size();
 
 		farmStar(pair.closestSpirits, *pair.base, *pair.star, true);
+		
+		println("pair star %d, base %d: %d/%d spirits used", pair.star->index,pair.base->index, numSpirits - pair.closestSpirits.size(), numSpirits);
+
 
 		if (baseStarPairs.size() > 0)
 			assignSpriritsToClosestPair(pair.closestSpirits);
 		else
 			available = std::move(pair.closestSpirits);
 	}
+
+	print("%d spirits remaining", available.size());
 }
