@@ -7,12 +7,16 @@
 #include <map>
 #include <math.h>
 
+
+constexpr float F_EPS = std::numeric_limits<float>::epsilon() * 100;
+
 void processAttacks() {
 
 	for (auto& s : enemies)
 		if (s.energy > 0) {
-			if (dist(s, bases[0]) <= s.range)
-				goto attack;
+			for (auto& base : bases)
+				if (base.controlledBy == myPlayerId && dist(s, base) <= s.range)
+					goto attack;
 			for (auto& t : units)
 				if (dist(s, t) <= s.range)
 					goto attack;
@@ -34,9 +38,12 @@ void processAttacks() {
 	for (auto it = available.begin(); it < available.end(); it++) {
 		auto*& s = *it;
 		if (s->energy > 0) {
-			if (dist(*s, bases[1]) <= s->range) {
-				s->attackBase(bases[1]);
-				continue;
+			for (auto& base : bases) {
+				if (base.controlledBy != myPlayerId && base.controlledBy != -1)
+					if (dist(*s, base) <= s->range) {
+						s->attackBase(base);
+						continue;
+					}
 			}
 			for (auto*& t : enemiesSort)
 				if (t->energy >= (t->ds <= 200 || t->des <= 200 ? -t->size : 0) && dist(*s, *t) <= s->range) {
@@ -65,9 +72,9 @@ void attackOrCharge(MySpirit& s, const Position& target) {
 		s.charge(*closestStar);
 
 	if (std::max(closestStarDistance - 200, 1.f) * s.energy < std::max(dist(s, target) - 200, 1.f) * (s.energyCapacity - s.energy))
-		moveCombatAdvantage(s, inDirection(*closestStar, closestStarDistance > 200 ? s : target, 199.9));
+		moveCombatAdvantage(s, inDirection(*closestStar, closestStarDistance > 180 ? s : target, 179.9));
 	else
-		moveCombatAdvantage(s, inDirection(target, s, 199.9));
+		moveCombatAdvantage(s, inDirection(target, s, 179.9));
 }
 
 
@@ -177,8 +184,32 @@ void defend() {
 
 
 void attack() {
-	for (auto*& s : available)
-		attackOrCharge(*s, bases[1]);
+	for (auto*& s : available) {
+		ChargeTarget* closestTarget = nullptr;
+		float closestTargetDistance = std::numeric_limits<float>::infinity();
+		for (auto& base : bases) {
+			if (base.controlledBy == myPlayerId || base.controlledBy == -1)
+				continue;
+			float d = dist(base, *s);
+			if (d < closestTargetDistance) {
+				closestTargetDistance = d;
+				closestTarget = &base;
+			}
+		}
+		if (!closestTarget)
+			for (auto& outpost : outposts) {
+				if (outpost.controlledBy == myPlayerId || outpost.controlledBy == -1)
+					continue;
+				float d = dist(outpost, *s);
+				if (d < closestTargetDistance) {
+					closestTargetDistance = d;
+					closestTarget = &outpost;
+				}
+			}
+
+		if (closestTarget)
+			attackOrCharge(*s, *closestTarget);
+	}
 }
 
 
@@ -187,14 +218,16 @@ void attack() {
 
 
 template<bool isFriendly>
-void addSweepPoint(float A, float B, float strength) {
+void addSweepPoints(float A, float B, float strength) {
+	float angle1 = A - B;
+	float angle2 = isFriendly ? A + B : A + B - 2 * M_PI;
 	angles.emplace_back(SweepPoint{
-		.angle = A - B,
+		.angle = angle1 + (isFriendly ? F_EPS : -F_EPS),
 		.strength = strength,
 		.type = isFriendly ? SweepPointType::Add : SweepPointType::Subtract,
 	});
 	angles.emplace_back(SweepPoint{
-		.angle = isFriendly ? A + B : A + B - 2 * (float)M_PI,
+		.angle = angle2 + (isFriendly ? -F_EPS : F_EPS),
 		.strength = strength,
 		.type = isFriendly ? SweepPointType::Subtract : SweepPointType::Add,
 	});
@@ -203,12 +236,14 @@ void addSweepPoint(float A, float B, float strength) {
 
 void moveCombatAdvantage(MySpirit& s, const Position& targetPosition) {
 
-	constexpr float moveDist = 20;
-	constexpr float targetWeight = -0.1f / (2*moveDist);
+	static constexpr float MAX_MOVE_DIST = 20;
+	static constexpr float TARGET_WEIGHT = -0.1f / (2*MAX_MOVE_DIST);
+
+	float targetAngle = atan2(targetPosition - s);
 
 	angles.clear();
 	angles.emplace_back(SweepPoint{
-		.angle = atan2(targetPosition - s),
+		.angle = targetAngle,
 		.type = SweepPointType::Target,
 	});
 	
@@ -218,15 +253,15 @@ void moveCombatAdvantage(MySpirit& s, const Position& targetPosition) {
 		auto*& other = *it;
 		float d = dist(s, *other);
 
-		if (&s != other && d < 2*2*moveDist) {
+		if (&s != other && d < 2*2*MAX_MOVE_DIST) {
 			float strength = other->strength();
 			if (d == 0) {
 				currentStrength += strength;
 				continue;
 			}
-			float B = acosf(d / (2*2*moveDist));
+			float B = acosf(d / (2*2*MAX_MOVE_DIST));
 			float A = atan2(*other - s);
-			addSweepPoint<true>(A, B, strength);
+			addSweepPoints<true>(A, B, strength);
 			// angles.emplace_back(SweepPoint{
 			// 	.angle = A,
 			// 	.type = SweepPointType::Interest,
@@ -234,20 +269,20 @@ void moveCombatAdvantage(MySpirit& s, const Position& targetPosition) {
 		}
 	}
 	for (auto& other : enemies) {
-		constexpr float attackDist = 200.1f + moveDist;
+		constexpr float attackDist = 200.1f + MAX_MOVE_DIST;
 		float d = dist(s, other);
 		float strength = other.strength();
-		if (d >= attackDist + moveDist)
+		if (d >= attackDist + MAX_MOVE_DIST)
 			continue; // never in range
 			
 		currentStrength -= strength;
 
-		if (d <= attackDist - moveDist) 
+		if (d <= attackDist - MAX_MOVE_DIST) 
 			continue; // always in range
 
-		float B = acosf((d - attackDist - moveDist) / (2*moveDist));
+		float B = acosf((d - attackDist - MAX_MOVE_DIST) / (2*MAX_MOVE_DIST));
 		float A = atan2(other - s);
-		addSweepPoint<false>(A, B, strength);
+		addSweepPoints<false>(A, B, strength);
 	}
 
 	for (auto& outpost : outposts) {
@@ -256,26 +291,26 @@ void moveCombatAdvantage(MySpirit& s, const Position& targetPosition) {
 		float attackDist = outpost.range + .1f;
 		float d = dist(s, outpost);
 
-		if (d >= attackDist + moveDist)
+		if (d >= attackDist + MAX_MOVE_DIST)
 			continue; // never in range
 		
 		float strength = outpost.strength();
 		if (!outpost.isFriendly())
 			currentStrength -= strength;
 			
-		if (d <= attackDist - moveDist) {
+		if (d <= attackDist - MAX_MOVE_DIST) {
 			if (outpost.isFriendly())
 				currentStrength += strength;
 			continue; // always in range
 		}
 
 		
-		float B = acosf((d - attackDist - moveDist) / (2*moveDist));
+		float B = acosf((d - attackDist - MAX_MOVE_DIST) / (2*MAX_MOVE_DIST));
 		float A = atan2(outpost - s);
 		if (outpost.isFriendly())
-			addSweepPoint<true>(A, B, strength);
+			addSweepPoints<true>(A, B, strength);
 		else
-			addSweepPoint<false>(A, B, strength);
+			addSweepPoints<false>(A, B, strength);
 	}
 
 	std::sort(angles.begin(), angles.end(), [](auto& a, auto& b){
@@ -285,12 +320,13 @@ void moveCombatAdvantage(MySpirit& s, const Position& targetPosition) {
 	float bestScore = -std::numeric_limits<float>::infinity();
 	std::vector<SweepPoint>::iterator bestSweepPoint;
 	for (auto it = angles.begin(); it != angles.end(); it++) {
+
 		if (it->type == SweepPointType::Add)
 			currentStrength += it->strength;
 
-		auto nextPos = s + moveDist * fromAngle(it->angle);
+		auto nextPos = s + MAX_MOVE_DIST * fromAngle(it->angle);
 		// print("%f,%f ", it->angle, currentStrength);	
-		float score = std::min(0.f, currentStrength) + targetWeight * dist(nextPos, targetPosition);
+		float score = std::min(0.f, currentStrength) + TARGET_WEIGHT * dist(nextPos, targetPosition);
 		if (score > bestScore) {
 			bestScore = score;
 			bestSweepPoint = it;
@@ -303,6 +339,14 @@ void moveCombatAdvantage(MySpirit& s, const Position& targetPosition) {
 
 	if (bestSweepPoint->type == SweepPointType::Target)
 		s.move(targetPosition);
-	else
+	else {
+		float moveDist;
+		if (std::abs(bestSweepPoint->angle - targetAngle) < M_PI_2 || std::abs(bestSweepPoint->angle - targetAngle) > M_PI + M_PI_2)
+			moveDist = MAX_MOVE_DIST;
+		else {
+			moveDist = MAX_MOVE_DIST; // TODO
+
+		}
 		s.move(s + (moveDist + 1) * fromAngle(bestSweepPoint->angle));
+	}
 }

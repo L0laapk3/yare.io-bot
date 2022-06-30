@@ -39,14 +39,14 @@ void parseTick(int tick) {
 	int bCount = Interface::Base::count();
 
 	for (int i = 0; i < bCount; i++) {
-		Base base{
-			Interface::Base::position(i),
-			.index = i,
-			.energyCapacity = Interface::Base::energyCapacity(i),
-			.energy = Interface::Base::energy(i),
-			.spiritCost = Interface::Base::currentSpiritCost(i),
-			.controlledBy = Interface::Base::controlledBy(i),
-		};
+		Base base;
+		base.position = Interface::Base::position(i);
+		base.energyCapacity = Interface::Base::energyCapacity(i);
+		base.energy = Interface::Base::energy(i);
+		base.controlledBy = Interface::Base::controlledBy(i);
+		base.index = i;
+		base.spiritCost = Interface::Base::currentSpiritCost(i);
+
 		if (base.energy >= base.spiritCost)
 			base.energy -= base.spiritCost;
 
@@ -60,10 +60,10 @@ void parseTick(int tick) {
 	for (int i = 0; i < oCount; i++) {
 		outposts.emplace_back(Outpost{
 			Interface::Outpost::position(i),
-			.energyCapacity = Interface::Outpost::energyCapacity(i),
-			.energy = Interface::Outpost::energy(i),
+			Interface::Outpost::energyCapacity(i),
+			Interface::Outpost::energy(i),
+			Interface::Outpost::controlledBy(i),
 			.range = Interface::Outpost::range(i),
-			.controlledBy = Interface::Outpost::controlledBy(i),
 		});
 	}
 
@@ -73,6 +73,7 @@ void parseTick(int tick) {
 			Interface::Star::position(i),
 			.energyCapacity = 1000,//Interface::Star::energyCapacity(i),
 			.energy = Interface::Star::energy(i),
+			.index = i
 		};
 		star.activatesIn = star.energy == 0 ? 100 - currentTick : 0;
 		stars.emplace_back(star);
@@ -165,12 +166,17 @@ void MySpirit::energize(MySpirit& s) {
 	energy -= std::min(energy, size);
 	usedEnergize = true;
 }
-void MySpirit::energizeBase(Base& b) {
+
+template<typename T>
+void MySpirit::energize(T& b) {
 	_energizeBase(b);
 	b.energy = std::min(b.energy + std::min(energy, size), b.energyCapacity);
 	energy -= std::min(energy, size);
 	usedEnergize = true;
 }
+template void MySpirit::energize(Base& b);
+
+
 void MySpirit::attackBase(Base& b) {
 	_energizeBase(b);
 	b.energy -= 2 * std::min(energy, size);

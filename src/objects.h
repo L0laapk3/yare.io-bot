@@ -14,24 +14,24 @@ struct Object {
 struct Star : public Object {
 	int energyCapacity;
 	int energy;
+	int index;
 	static constexpr int energyGenFlat = 2;
 	static constexpr float energyGenScaling = 2.f / 100.f;
 	int activatesIn;
 };
 
-struct Base : public Object {
-	int index;
+struct ChargeTarget : public Object {
 	int energyCapacity;
 	int energy;
-	int spiritCost;
 	int controlledBy;
 };
+struct Base : public ChargeTarget {
+	int index;
+	int spiritCost;
+};
 
-struct Outpost : public Object {
-	int energyCapacity;
-	int energy;
+struct Outpost : public ChargeTarget {
 	float range;
-	int controlledBy;
 
 	float strength();
 	bool isFriendly();
@@ -66,17 +66,20 @@ struct MySpirit : public Spirit {
 	void charge(Star&);
 	void attack(EnemySpirit&);
 	void energize(MySpirit&);
-	void _energize(const Spirit&);
-	void energizeBase(Base&);
+	template<typename T>
+	void energize(T&);
 	void attackBase(Base&);
-	void _energizeBase(const Base&);
 	void energizeOutpost(Outpost&);
-	void _energizeOutpost(const Outpost&);
 	void move(const Position&);
 	void merge(const Spirit&);
 	void divide();
 	void jump(const Position&);
 	void shout(const char*);
+
+// private:
+	void _energize(const Spirit&);
+	void _energizeBase(const Base&);
+	void _energizeOutpost(const Outpost&);
 };
 
 
