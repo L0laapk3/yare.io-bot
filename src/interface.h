@@ -58,7 +58,7 @@ namespace Interface {
 		IMPORT("stars", "energyCapacity") int energyCapacity(int);
 		IMPORT("stars", "energy") int energy(int);
 		IMPORT("stars", "energyGenFlat") int energyGenFlat(int);
-		IMPORT("stars", "energyGenScaling") int energyGenScaling(int);
+		IMPORT("stars", "energyGenScaling") float energyGenScaling(int);
 	};
 
 	namespace Outpost {
