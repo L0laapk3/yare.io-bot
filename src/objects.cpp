@@ -1,5 +1,6 @@
 #include "objects.h"
 
+#include "safeMove.h"
 #include "interface.h"
 #include "printf.h"
 
@@ -113,6 +114,8 @@ void parseTick(int tick) {
 			});
 		}
 	}
+
+	safeMoveReserve(units.size(), enemies.size(), outposts.size());
 
 	lastEnemyPositions.clear();
 	for (auto& s : enemies) {

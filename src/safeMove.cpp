@@ -3,6 +3,8 @@
 #include <vector>
 #include <math.h>
 
+#include "safeMove.h"
+
 
 // considers all friendly and foe spirits and structures, their attack ranges and movement ranges.
 // performs 2 sweeps:
@@ -23,7 +25,7 @@ struct AngleSweepPoint {
 	SweepPointType type;
 };
 struct LineSweepPoint {
-	float distance; // 40 to 0, 40 being furthest away from target
+	float distance; // 40 to 0, 40 being furthest away from target (lineStart)
 	float strength;
 	SweepPointType type;
 };
@@ -64,6 +66,10 @@ void addLineSweepPoints(float centerDist, float offsetDist, float strength) {
 		});
 }
 
+void safeMoveReserve(int mySpiritCount, int enemySpiritCount, int outpostCount) {
+	anglePoints.reserve(1 + mySpiritCount * 2 + enemySpiritCount * 2 + outpostCount);
+	linePoints.reserve(1 + mySpiritCount * 2 + enemySpiritCount * 2 + outpostCount);
+}
 
 void MySpirit::safeMove(const Position& targetPosition) {
 
@@ -71,23 +77,23 @@ void MySpirit::safeMove(const Position& targetPosition) {
 	static constexpr float TARGET_WEIGHT = -0.1f / (2*MAX_MOVE_DIST);
 
 	float targetAngle = atan2(targetPosition - *this);
+	
+	auto lineStart = inDirection(*this, targetPosition, -MAX_MOVE_DIST);
+	auto lineEnd = inDirection(*this, targetPosition, MAX_MOVE_DIST);
 
-	// add all circle-circle and circle-line intersections to list
-
-	anglePoints.reserve(1 + available.size() * 2 + enemies.size() * 2 + outposts.size());
-	linePoints.reserve(available.size() * 2 + enemies.size() * 2 + outposts.size());
 	anglePoints.clear();
-	linePoints.clear();
 	anglePoints.emplace_back(AngleSweepPoint{
 		.angle = targetAngle,
 		.type = SweepPointType::Target,
 	});
+	linePoints.clear();
+	linePoints.emplace_back(LineSweepPoint{
+		.distance = std::max<float>(2 * MAX_MOVE_DIST + F_EPS, dist(lineStart, targetPosition)),
+		.type = SweepPointType::Target,
+	});
 	
-	auto lineStart = inDirection(*this, targetPosition, -MAX_MOVE_DIST);
-	auto lineEnd = inDirection(*this, targetPosition, MAX_MOVE_DIST);
-	
+	// add all circle-circle and circle-line intersections to list
 	float currentStrength = strength();
-
 	for (auto it = available.begin(); it != available.end(); it++) {
 		auto*& other = *it;
 		float d = dist(*this, *other);
