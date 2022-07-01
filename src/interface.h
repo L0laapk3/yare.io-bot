@@ -57,6 +57,8 @@ namespace Interface {
 		inline Position position(int i) { return Position{ positionX(i), positionY(i) }; }
 		IMPORT("stars", "energyCapacity") int energyCapacity(int);
 		IMPORT("stars", "energy") int energy(int);
+		IMPORT("stars", "energyGenFlat") int energyGenFlat(int);
+		IMPORT("stars", "energyGenScaling") int energyGenScaling(int);
 	};
 
 	namespace Outpost {

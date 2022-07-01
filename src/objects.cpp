@@ -74,8 +74,8 @@ void parseTick(int tick) {
 			.index = i
 		};
 		star.activatesIn = 0;
-		star.energyGenFlat = star.energyCapacity == 3000 ? 3 : 2;
-		star.energyGenScaling = star.energyCapacity == 3000 ? .03f : .02f;
+		star.energyGenFlat = Interface::Star::energyGenFlat(i);
+		star.energyGenScaling = Interface::Star::energyGenScaling(i);
 		stars.emplace_back(star);
 	}
 	std::sort(stars.begin(), stars.end(), [&](auto& a, auto& b){
