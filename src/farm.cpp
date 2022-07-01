@@ -275,7 +275,7 @@ void farm() {
 			BaseStar* closestPair = nullptr;
 			float closestPairDist = std::numeric_limits<float>::max();
 			for (auto& pair : baseStarPairs) {
-				float d = (dist(*pair.base, *s) + dist(*pair.star, *s)) * pair.efficiency;
+				float d = (dist(*pair.base, *s) + dist(*pair.star, *s)) / pair.efficiency;
 				if (d < closestPairDist) {
 					closestPairDist = d;
 					closestPair = &pair;
@@ -297,7 +297,7 @@ void farm() {
 
 		farmStar(pair.closestSpirits, *pair.base, *pair.star, false);
 		
-		println("pair star %i, base %i: %i/%i spirits used", pair.star->index,pair.base->index, numSpirits - pair.closestSpirits.size(), numSpirits);
+		println("pair star %i, base %i, eff %f: %i/%i spirits used", pair.star->index, pair.base->index, pair.efficiency, numSpirits - pair.closestSpirits.size(), numSpirits);
 
 
 		if (baseStarPairs.size() > 0)
