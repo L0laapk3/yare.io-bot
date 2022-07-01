@@ -48,3 +48,6 @@ Position rot90(const Position& u, const Position& dir) {
 	auto v = rot90(u);
 	return dot(v, { -u.y, u.x }) >= 0 ? v : v * -1;
 }
+Position proj(const Position& u, const Position& v) { // projects u onto 0->v
+	return u * dot(u, v) / dot(v, v);
+}

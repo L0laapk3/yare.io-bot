@@ -8,7 +8,6 @@
 #include <math.h>
 
 
-constexpr float F_EPS = std::numeric_limits<float>::epsilon() * 100;
 
 void processAttacks() {
 
@@ -56,7 +55,6 @@ void processAttacks() {
 
 
 
-void moveCombatAdvantage(MySpirit& s, const Position& targetPosition);
 void attackOrCharge(MySpirit& s, const Position& target) {
 	Star* closestStar;
 	float closestStarDistance = std::numeric_limits<float>::infinity();
@@ -80,21 +78,9 @@ void attackOrCharge(MySpirit& s, const Position& target) {
 
 
 
-enum SweepPointType {
-	Add,
-	Subtract,
-	Target,
-};
-struct SweepPoint {
-	float angle;
-	float strength;
-	SweepPointType type;
-};
-std::vector<SweepPoint> angles;
 
 std::map<int, int> pastDefenders;
 void defend() {
-	angles.reserve(1 + available.size() * 2 + enemies.size() * 2 + outposts.size());
 
 	constexpr int tooClose = 500;
 	std::vector<MySpirit*> defenders;
@@ -209,144 +195,5 @@ void attack() {
 
 		if (closestTarget)
 			attackOrCharge(*s, *closestTarget);
-	}
-}
-
-
-
-
-
-
-template<bool isFriendly>
-void addSweepPoints(float A, float B, float strength) {
-	float angle1 = A - B;
-	float angle2 = isFriendly ? A + B : A + B - 2 * M_PI;
-	angles.emplace_back(SweepPoint{
-		.angle = angle1 + (isFriendly ? F_EPS : -F_EPS),
-		.strength = strength,
-		.type = isFriendly ? SweepPointType::Add : SweepPointType::Subtract,
-	});
-	angles.emplace_back(SweepPoint{
-		.angle = angle2 + (isFriendly ? -F_EPS : F_EPS),
-		.strength = strength,
-		.type = isFriendly ? SweepPointType::Subtract : SweepPointType::Add,
-	});
-}
-
-
-void MySpirit::safeMove(const Position& targetPosition) {
-
-	static constexpr float MAX_MOVE_DIST = 20;
-	static constexpr float TARGET_WEIGHT = -0.1f / (2*MAX_MOVE_DIST);
-
-	float targetAngle = atan2(targetPosition - *this);
-
-	angles.clear();
-	angles.emplace_back(SweepPoint{
-		.angle = targetAngle,
-		.type = SweepPointType::Target,
-	});
-	
-	float currentStrength = strength();
-
-	for (auto it = available.begin(); it != available.end(); it++) {
-		auto*& other = *it;
-		float d = dist(*this, *other);
-
-		if (this != other && d < 2*2*MAX_MOVE_DIST) {
-			float strength = other->strength();
-			if (d == 0) {
-				currentStrength += strength;
-				continue;
-			}
-			float B = acosf(d / (2*2*MAX_MOVE_DIST));
-			float A = atan2(*other - *this);
-			addSweepPoints<true>(A, B, strength);
-			// angles.emplace_back(SweepPoint{
-			// 	.angle = A,
-			// 	.type = SweepPointType::Interest,
-			// });
-		}
-	}
-	for (auto& other : enemies) {
-		constexpr float attackDist = 200.1f + MAX_MOVE_DIST;
-		float d = dist(*this, other);
-		float strength = other.strength();
-		if (d >= attackDist + MAX_MOVE_DIST)
-			continue; // never in range
-			
-		currentStrength -= strength;
-
-		if (d <= attackDist - MAX_MOVE_DIST) 
-			continue; // always in range
-
-		float B = acosf((d - attackDist - MAX_MOVE_DIST) / (2*MAX_MOVE_DIST));
-		float A = atan2(other - *this);
-		addSweepPoints<false>(A, B, strength);
-	}
-
-	for (auto& outpost : outposts) {
-		if (outpost.energy <= 0)
-			continue;
-		float attackDist = outpost.range + .1f;
-		float d = dist(outpost, *this);
-
-		if (d >= attackDist + MAX_MOVE_DIST)
-			continue; // never in range
-		
-		float strength = outpost.strength();
-		if (!outpost.isFriendly())
-			currentStrength -= strength;
-			
-		if (d <= attackDist - MAX_MOVE_DIST) {
-			if (outpost.isFriendly())
-				currentStrength += strength;
-			continue; // always in range
-		}
-
-		
-		float B = acosf((d - attackDist - MAX_MOVE_DIST) / (2*MAX_MOVE_DIST));
-		float A = atan2(outpost - *this);
-		if (outpost.isFriendly())
-			addSweepPoints<true>(A, B, strength);
-		else
-			addSweepPoints<false>(A, B, strength);
-	}
-
-	std::sort(angles.begin(), angles.end(), [](auto& a, auto& b){
-		return a.angle < b.angle;
-	});
-
-	float bestScore = -std::numeric_limits<float>::infinity();
-	std::vector<SweepPoint>::iterator bestSweepPoint;
-	for (auto it = angles.begin(); it != angles.end(); it++) {
-
-		if (it->type == SweepPointType::Add)
-			currentStrength += it->strength;
-
-		auto nextPos = *this + MAX_MOVE_DIST * fromAngle(it->angle);
-		// print("%f,%f ", it->angle, currentStrength);	
-		float score = std::min(0.f, currentStrength) + TARGET_WEIGHT * dist(nextPos, targetPosition);
-		if (score > bestScore) {
-			bestScore = score;
-			bestSweepPoint = it;
-		}
-
-		if (it->type == SweepPointType::Subtract)
-			currentStrength -= it->strength;
-	}
-	// println("d %f", bestAngle);
-
-	if (bestSweepPoint->type == SweepPointType::Target)
-		move(targetPosition);
-	else {
-		float moveDist;
-		if (std::abs(bestSweepPoint->angle - targetAngle) < M_PI_2 || std::abs(bestSweepPoint->angle - targetAngle) > M_PI + M_PI_2)
-			moveDist = MAX_MOVE_DIST;
-		else {
-			moveDist = MAX_MOVE_DIST; // TODO
-
-		}
-		move(*this + (moveDist + 1) * fromAngle(bestSweepPoint->angle));
 	}
 }
