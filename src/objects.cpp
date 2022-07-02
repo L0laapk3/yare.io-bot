@@ -215,6 +215,7 @@ void MySpirit::charge(Star& s) {
 	usedEnergize = true;
 }
 void MySpirit::attack(EnemySpirit& s) {
+	shout("⚔️");
 	_energize(s);
 	s.energy -= 2 * std::min(energy, size);
 	energy -= std::min(energy, size);
@@ -250,6 +251,7 @@ void MySpirit::energize(ChargeTarget& b) {
 	usedEnergize = true;
 }
 void MySpirit::attack(ChargeTarget& b) {
+	shout("⚔️");
 	b.energizeResolveIntf(index);
 	b.energy -= 2 * std::min(energy, size);
 	energy -= std::min(energy, size);

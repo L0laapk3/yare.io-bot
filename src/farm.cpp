@@ -251,7 +251,7 @@ void farmPair(std::vector<MySpirit*>& farmers, BaseStar& pair, bool greedy) {
 		}
 	}
 			
-	println("pair %s -> %s, %i(%i)/%i, prio %f", pair.star->name(), pair.base->name(), farmerCount, available.size(), maxFarmers, pair.prio);
+	println("pair %s -> %s, %i/%i (%i) prio %f", pair.star->name(), pair.base->name(), farmerCount, maxFarmers, available.size(), pair.prio);
 
 	
 	farmers.erase(farmers.begin(), farmersEnd);
@@ -327,8 +327,8 @@ void farm() {
 		auto pair = std::move(baseStarPairs.back());
 		baseStarPairs.pop_back();
 
-		farmPair(pair.closestSpirits, pair, greedy);
-
+		if (pair.base->controlledBy == myPlayerId || pair.base->energy == 0)
+			farmPair(pair.closestSpirits, pair, greedy);
 
 		if (baseStarPairs.size() > 0)
 			assignSpriritsToClosestPair(pair.closestSpirits);
