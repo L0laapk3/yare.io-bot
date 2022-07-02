@@ -251,3 +251,44 @@ void MySpirit::jump(const Position& p) {
 void MySpirit::shout(const char* str) {
 	Interface::Spirit::shout(index, str);
 }
+
+
+
+
+std::vector<char*> stringAllocs;
+char* Spirit::name() {
+    char* cStr = Interface::Spirit::nameAlloc(index);
+	stringAllocs.push_back(cStr);
+	return cStr;
+}
+
+char* ChargeTarget::name() {
+	if (!isOutpost)
+		return ((Base*)this)->name();
+	return ((Outpost*)this)->name();
+}
+
+char* Base::name() {
+    char* cStr = Interface::Base::nameAlloc(index);
+	stringAllocs.push_back(cStr);
+	return cStr;
+}
+
+char* Outpost::name() {
+    char* cStr = Interface::Outpost::nameAlloc(index);
+	stringAllocs.push_back(cStr);
+	return cStr;
+}
+
+char* Star::name() {
+    char* cStr = Interface::Star::nameAlloc(index);
+	stringAllocs.push_back(cStr);
+	return cStr;
+}
+
+void dealloc() {
+	for (auto i = stringAllocs.end(); i --> stringAllocs.begin(); ) {
+		free(stringAllocs.back());
+		stringAllocs.pop_back();
+	}
+}

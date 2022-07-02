@@ -18,4 +18,6 @@ void tick(int currentTick) {
 	defend();
 	farm();
 	attack();
+
+	dealloc();
 }

@@ -48,6 +48,7 @@ void processAttacks() {
 			for (auto*& t : enemiesSort)
 				if (t->energy >= (t->ds <= 200 || t->des <= 200 ? -t->size : 0) && dist(*s, *t) <= s->range) {
 					s->attack(*t);
+					s->shout("⚔️");
 					break;
 				}
 		}

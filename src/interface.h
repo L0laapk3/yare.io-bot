@@ -15,6 +15,7 @@ enum Shape {
 namespace Interface {
 	namespace Spirit {
 		IMPORT("spirits", "count") int count();
+		IMPORT("spirits", "nameAlloc") char* nameAlloc(int);
 		IMPORT("spirits", "positionX") float positionX(int);
 		IMPORT("spirits", "positionY") float positionY(int);
 		// IMPORT("spirits", "position") Position position(int);
@@ -40,6 +41,7 @@ namespace Interface {
 
 	namespace Base {
 		IMPORT("bases", "count") int count();
+		IMPORT("bases", "nameAlloc") char* nameAlloc(int);
 		IMPORT("bases", "positionX") float positionX(int);
 		IMPORT("bases", "positionY") float positionY(int);
 		// IMPORT("bases", "position") Position position(int);
@@ -52,6 +54,7 @@ namespace Interface {
 
 	namespace Star {
 		IMPORT("stars", "count") int count();
+		IMPORT("stars", "nameAlloc") char* nameAlloc(int);
 		IMPORT("stars", "positionX") float positionX(int);
 		IMPORT("stars", "positionY") float positionY(int);
 		// IMPORT("stars", "position") Position position(int);
@@ -64,6 +67,7 @@ namespace Interface {
 
 	namespace Outpost {
 		IMPORT("outposts", "count") int count();
+		IMPORT("outposts", "nameAlloc") char* nameAlloc(int);
 		IMPORT("outposts", "positionX") float positionX(int);
 		IMPORT("outposts", "positionY") float positionY(int);
 		// IMPORT("outposts", "position") Position position(int);
@@ -76,6 +80,8 @@ namespace Interface {
 
 	namespace Player {
 		IMPORT("players", "count") int count();
+		char* name(int);
+		IMPORT("players", "nameAlloc") char* nameAlloc(int);
 		IMPORT("players", "me") int me();
 	};
 

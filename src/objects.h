@@ -12,16 +12,23 @@ struct Object {
 };
 
 struct Star : public Object {
+	
+// interface
 	int energyCapacity;
 	int energy;
 	int index;
+	char* name();
 	int energyGenFlat = 2;
 	float energyGenScaling = .02f;
 	int activatesIn;
+
+// self defined
+	float usedEnergyGeneration = 0;
 };
 
 struct MySpirit;
 struct ChargeTarget : public Object {
+	char* name();
 	int energyCapacity;
 	int energy;
 	int controlledBy;
@@ -30,12 +37,14 @@ struct ChargeTarget : public Object {
 };
 
 struct Base : public ChargeTarget {
+	char* name();
 	static int spiritCost(Shape shape, int totalTeamSpirits);
 	template<Shape shape>
 	static int spiritCost(int totalTeamSpirits);
 };
 
 struct Outpost : public ChargeTarget {
+	char* name();
 	float range;
 
 	float strength();
@@ -44,6 +53,7 @@ struct Outpost : public ChargeTarget {
 
 struct Spirit : public Object {
 	int index;
+	char* name();
 	int size;
 	Shape shape;
 	int energyCapacity;
@@ -105,5 +115,7 @@ extern std::map<int, Position> lastEnemyPositions;
 extern float myStrength;
 extern float enemyStrength;
 
+extern std::vector<char*> stringAllocs;
+void dealloc();
 
 void parseTick(int tick);
