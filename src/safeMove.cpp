@@ -159,7 +159,7 @@ void MySpirit::safeMove(const Position& targetPosition) {
 	for (auto& outpost : outposts) {
 		if (outpost.energy <= 0)
 			continue;
-		float attackDist = outpost.range + F_EPS;
+		float attackDist = outpost.range - (outpost.isFriendly() ? 200 : 0) + F_EPS;
 		float d = dist(outpost, *this);
 
 		if (d >= attackDist + MAX_MOVE_DIST)

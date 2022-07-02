@@ -88,9 +88,12 @@ void farmStar(std::vector<MySpirit*>& farmers, ChargeTarget& target, Star& star,
 
 	float farmer2CycleTime = 2.f * (10 + travelTime);
 	float perfectEfficiency = 10.f / (10 * numChains + farmer2CycleTime);
+	constexpr float MAX_WORKERS_PER_REMAINING_ENERGY = 0.1f;
 
 	int starEnergyProduction = star.energyGenFlat + (int)std::roundf(star.energy * star.energyGenScaling);
-	int maxFarmers = tippingPoint(farmers[0]->shape, farmEfficiency(numChains, travelTime), star, greedy);
+	int maxFarmersDeplete = tippingPoint(farmers[0]->shape, farmEfficiency(numChains, travelTime), star, greedy || target.isOutpost);
+	int maxFarmersEnergy = std::ceilf((target.energyCapacity - target.energy) / perfectEfficiency * MAX_WORKERS_PER_REMAINING_ENERGY);
+	int maxFarmers = std::min<int>({ maxFarmersDeplete, maxFarmersEnergy });
 	int farmerCount = std::min<int>(maxFarmers, farmers.size());
 	auto farmersEnd = farmers.begin() + farmerCount;
 	// println("dist: %f, numChains: %i, travelTime: %i, farmers: %i/%i%s", P2BsDist + 199.9f, numChains, travelTime, farmerCount, maxFarmers, preserve ? "p" : "");
@@ -161,7 +164,7 @@ void farmStar(std::vector<MySpirit*>& farmers, ChargeTarget& target, Star& star,
 		// 	println("%i %f", s->usedEnergize, dist(*s, target));
 		if (s->usedEnergize)
 			continue;
-		if (s->energy > 0 && dist(*s, target) <= 200) {
+		if (s->energy > 0 && dist(*s, target) <= 200 && target.energy < target.energyCapacity) {
 			s->energize(target);
 		} else if (s->energy + s->size <= s->energyCapacity && dist(star, *s) <= 200)
 			s->charge(star);
@@ -244,9 +247,11 @@ void farmStar(std::vector<MySpirit*>& farmers, ChargeTarget& target, Star& star,
 struct BaseStar {
 	Star* star;
 	ChargeTarget* base;
-	float efficiency;
+	float value;
 	std::vector<MySpirit*> closestSpirits;
 };
+
+constexpr float OUTPOST_OVER_BASE_PREFERENCE = 1.3f;
 
 std::vector<BaseStar> baseStarPairs{};
 void farm() {
@@ -259,14 +264,21 @@ void farm() {
 		
 		float closestBaseDist = std::numeric_limits<float>::max();
 		for (auto& base : bases) {
-			float d = dist(base, star);
+			float d = dist(base, star) * OUTPOST_OVER_BASE_PREFERENCE;
 			if (d < closestBaseDist) {
 				closestBaseDist = d;
 				pair.base = &base;
 			}
 		}
+		for (auto& outpost : outposts) {
+			float d = dist(outpost, star);
+			if (d < closestBaseDist) {
+				closestBaseDist = d;
+				pair.base = &outpost;
+			}
+		}
 
-		pair.efficiency = farmEfficiency(*pair.base, *pair.star);
+		pair.value = farmEfficiency(*pair.base, *pair.star) * (pair.base->isOutpost ? OUTPOST_OVER_BASE_PREFERENCE : 1.f);
 	}
 
 	auto assignSpriritsToClosestPair = [&](std::vector<MySpirit*> spirits) {
@@ -274,7 +286,7 @@ void farm() {
 			BaseStar* closestPair = nullptr;
 			float closestPairDist = std::numeric_limits<float>::max();
 			for (auto& pair : baseStarPairs) {
-				float d = (dist(*pair.base, *s) + dist(*pair.star, *s)) / pair.efficiency;
+				float d = (dist(*pair.base, *s) + dist(*pair.star, *s)) / pair.value;
 				if (d < closestPairDist) {
 					closestPairDist = d;
 					closestPair = &pair;
@@ -283,6 +295,9 @@ void farm() {
 			closestPair->closestSpirits.push_back(s);
 		}
 	};
+
+
+	bool greedy = currentTick < 50;
 
 	assignSpriritsToClosestPair(available);
 	while (baseStarPairs.size() > 0) {
@@ -294,9 +309,9 @@ void farm() {
 
 		int numSpirits = pair.closestSpirits.size();
 
-		farmStar(pair.closestSpirits, *pair.base, *pair.star, false);
+		farmStar(pair.closestSpirits, *pair.base, *pair.star, greedy);
 		
-		println("pair star %i, eff %f: %i/%i spirits used", pair.star->index, pair.efficiency, numSpirits - pair.closestSpirits.size(), numSpirits);
+		println("pair star %i, eff %f: %i/%i spirits used", pair.star->index, pair.value, numSpirits - pair.closestSpirits.size(), numSpirits);
 
 
 		if (baseStarPairs.size() > 0)
