@@ -55,10 +55,22 @@ int tippingPoint(Shape shape, float farmEfficiency, Star& star, bool greedy) {
 }
 
 
+
+
+struct BaseStar {
+	Star* star;
+	ChargeTarget* base;
+	float prio;
+	std::vector<MySpirit*> closestSpirits;
+};
+
 int loss1 = 0, loss2 = 0;
-void farmStar(std::vector<MySpirit*>& farmers, ChargeTarget& target, Star& star, bool greedy) {
+void farmPair(std::vector<MySpirit*>& farmers, BaseStar& pair, bool greedy) {
 	if (farmers.size() <= 0)
 		return;
+
+	auto& star = *pair.star;
+	auto& target = *pair.base;
 
 	Position P2B;
 	Outpost& outpost = outposts[0];
@@ -91,11 +103,11 @@ void farmStar(std::vector<MySpirit*>& farmers, ChargeTarget& target, Star& star,
 	constexpr float MAX_WORKERS_PER_REMAINING_ENERGY = 0.02f;
 
 	int starEnergyProduction = star.energyGenFlat + (int)std::roundf(star.energy * star.energyGenScaling);
-	int maxFarmersDeplete = tippingPoint(farmers[0]->shape, farmEfficiency(numChains, travelTime), star, greedy || target.isOutpost);
-	int maxFarmersEnergy = target.isOutpost && target.controlledBy == myPlayerId ? std::ceilf((target.energyCapacity - target.energy) / perfectEfficiency * MAX_WORKERS_PER_REMAINING_ENERGY) : 9999999;
+	int maxFarmersDeplete = tippingPoint(farmers[0]->shape, farmEfficiency(numChains, travelTime), star, greedy || target.type != Base::TYPE);
+	int maxFarmersEnergy = target.type != Base::TYPE && target.controlledBy == myPlayerId ? std::ceilf((target.energyCapacity - target.energy) / perfectEfficiency * MAX_WORKERS_PER_REMAINING_ENERGY) : 9999999;
 	int maxFarmers = std::min<int>({ maxFarmersDeplete, maxFarmersEnergy });
 	int farmerCount = std::min<int>(maxFarmers, farmers.size());
-	println("max: dep: %i lim: %i (%i %i) cnt %i", maxFarmersDeplete, maxFarmersEnergy, farmers.size());
+	// println("max: dep: %i lim: %i (%i %i) cnt %i", maxFarmersDeplete, maxFarmersEnergy, farmers.size());
 	auto farmersEnd = farmers.begin() + farmerCount;
 	// println("dist: %f, numChains: %i, travelTime: %i, farmers: %i/%i%s", P2BsDist + 199.9f, numChains, travelTime, farmerCount, maxFarmers, preserve ? "p" : "");
 	if (farmerCount <= 0)
@@ -238,6 +250,9 @@ void farmStar(std::vector<MySpirit*>& farmers, ChargeTarget& target, Star& star,
 			}
 		}
 	}
+			
+	println("pair %s -> %s, %i(%i)/%i, prio %f", pair.star->name(), pair.base->name(), farmerCount, available.size(), maxFarmers, pair.prio);
+
 	
 	farmers.erase(farmers.begin(), farmersEnd);
 	// println("loss1: %i loss2: %i", loss1, loss2);
@@ -245,12 +260,7 @@ void farmStar(std::vector<MySpirit*>& farmers, ChargeTarget& target, Star& star,
 
 
 
-struct BaseStar {
-	Star* star;
-	ChargeTarget* base;
-	float value;
-	std::vector<MySpirit*> closestSpirits;
-};
+
 
 constexpr float OUTPOST_OVER_BASE_PREFERENCE = 1.3f;
 
@@ -271,7 +281,7 @@ void farm() {
 				pair.base = &base;
 			}
 		}
-		pair.value = farmEfficiency(*pair.base, *pair.star);
+		pair.prio = farmEfficiency(*pair.base, *pair.star);
 	}
 	
 	for (auto& outpost : outposts) {
@@ -288,7 +298,7 @@ void farm() {
 			}
 		}
 
-		pair.value = farmEfficiency(*pair.base, *pair.star) * OUTPOST_OVER_BASE_PREFERENCE;
+		pair.prio = farmEfficiency(*pair.base, *pair.star) * OUTPOST_OVER_BASE_PREFERENCE;
 	}
 
 	auto assignSpriritsToClosestPair = [&](std::vector<MySpirit*> spirits) {
@@ -296,7 +306,7 @@ void farm() {
 			BaseStar* closestPair = nullptr;
 			float closestPairDist = std::numeric_limits<float>::max();
 			for (auto& pair : baseStarPairs) {
-				float d = (dist(*pair.base, *s) + dist(*pair.star, *s)) / pair.value;
+				float d = (dist(*pair.base, *s) + dist(*pair.star, *s)) / pair.prio;
 				if (d < closestPairDist) {
 					closestPairDist = d;
 					closestPair = &pair;
@@ -317,11 +327,7 @@ void farm() {
 		auto pair = std::move(baseStarPairs.back());
 		baseStarPairs.pop_back();
 
-		int numSpirits = pair.closestSpirits.size();
-
-		farmStar(pair.closestSpirits, *pair.base, *pair.star, greedy);
-		
-		println("pair %s -> %s, val %f: %i/%i spirits used", pair.star->name(), pair.base->name(), pair.value, numSpirits - pair.closestSpirits.size(), numSpirits);
+		farmPair(pair.closestSpirits, pair, greedy);
 
 
 		if (baseStarPairs.size() > 0)

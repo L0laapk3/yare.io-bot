@@ -18,6 +18,7 @@ float enemyStrength;
 std::vector<Star> stars;
 std::vector<Base> bases;
 std::vector<Outpost> outposts;
+std::vector<Pylon> pylons;
 std::vector<MySpirit> units;
 std::vector<MySpirit*> available;
 std::vector<EnemySpirit> enemies;
@@ -45,6 +46,7 @@ void parseTick(int tick) {
 		base.energyCapacity = Interface::Base::energyCapacity(i);
 		base.energy = Interface::Base::energy(i);
 		base.controlledBy = Interface::Base::controlledBy(i);
+		base.type = Base::TYPE;
 		base.index = i;
 		// base.spiritCost = Interface::Base::currentSpiritCost(i);
 
@@ -63,8 +65,20 @@ void parseTick(int tick) {
 		outpost.energy = Interface::Outpost::energy(i);
 		outpost.controlledBy = Interface::Outpost::controlledBy(i);
 		outpost.range = Interface::Outpost::range(i);
-		outpost.isOutpost = true;
+		outpost.type = Outpost::TYPE;
 		outposts.emplace_back(outpost);
+	}
+
+	int pCount = Interface::Outpost::count();
+	for (int i = 0; i < pCount; i++) {
+		Pylon pylon;
+		pylon.index = i;
+		pylon.position = Interface::Pylon::position(i);
+		pylon.energyCapacity = Interface::Pylon::energyCapacity(i);
+		pylon.energy = Interface::Pylon::energy(i);
+		pylon.controlledBy = Interface::Pylon::controlledBy(i);
+		pylon.type = Pylon::TYPE;
+		pylons.emplace_back(pylon);
 	}
 
 	int stCount = Interface::Star::count();
@@ -165,21 +179,25 @@ int Base::spiritCost<Shape::Triangle>(int spirits) {
 }
 int Base::spiritCost(Shape shape, int totalTeamSpirits) {
 	switch (shape) {
-		case Shape::Triangle:
-			return spiritCost<Shape::Triangle>(totalTeamSpirits);
-		case Shape::Square:
-			return spiritCost<Shape::Square>(totalTeamSpirits);
-		// case Shape::Circle:
+		case Shape::Circle:
 		default:
 			return spiritCost<Shape::Circle>(totalTeamSpirits);
+		case Shape::Square:
+			return spiritCost<Shape::Square>(totalTeamSpirits);
+		case Shape::Triangle:
+			return spiritCost<Shape::Triangle>(totalTeamSpirits);
 	}
 }
 
 float Outpost::strength() {
 	return energy;
 }
-bool Outpost::isFriendly() {
+bool ChargeTarget::isFriendly() {
 	return controlledBy == myPlayerId;
+}
+
+float Pylon::strength() {
+	return 0.f;
 }
 
 float Spirit::strength() {
@@ -209,20 +227,30 @@ void MySpirit::energize(MySpirit& s) {
 	usedEnergize = true;
 }
 
+
+void ChargeTarget::energizeResolveIntf(int sindex) {
+	switch (type) {
+		case Base::TYPE:
+		default:
+			Interface::Spirit::energizeBase(sindex, index);
+			break;
+		case Outpost::TYPE:
+			Interface::Spirit::energizeOutpost(sindex, index);
+			break;
+		case Pylon::TYPE:
+			Interface::Spirit::energizePylon(sindex, index);
+			break;
+	}
+}
+
 void MySpirit::energize(ChargeTarget& b) {
-	if (!b.isOutpost)
-		Interface::Spirit::energizeBase(index, b.index);
-	else
-		Interface::Spirit::energizeOutpost(index, b.index);
+	b.energizeResolveIntf(index);
 	b.energy = std::min(b.energy + std::min(energy, size), b.energyCapacity);
 	energy -= std::min(energy, size);
 	usedEnergize = true;
 }
 void MySpirit::attack(ChargeTarget& b) {
-	if (!b.isOutpost)
-		Interface::Spirit::energizeBase(index, b.index);
-	else
-		Interface::Spirit::energizeOutpost(index, b.index);
+	b.energizeResolveIntf(index);
 	b.energy -= 2 * std::min(energy, size);
 	energy -= std::min(energy, size);
 	usedEnergize = true;
@@ -263,9 +291,15 @@ char* Spirit::name() {
 }
 
 char* ChargeTarget::name() {
-	if (!isOutpost)
-		return ((Base*)this)->name();
-	return ((Outpost*)this)->name();
+	switch (type) {
+		case Base::TYPE:
+		default:
+			return ((Base*)this)->name();
+		case Outpost::TYPE:
+			return ((Outpost*)this)->name();
+		case Pylon::TYPE:
+			return ((Pylon*)this)->name();
+	}
 }
 
 char* Base::name() {
@@ -276,6 +310,12 @@ char* Base::name() {
 
 char* Outpost::name() {
     char* cStr = Interface::Outpost::nameAlloc(index);
+	stringAllocs.push_back(cStr);
+	return cStr;
+}
+
+char* Pylon::name() {
+    char* cStr = Interface::Pylon::nameAlloc(index);
 	stringAllocs.push_back(cStr);
 	return cStr;
 }

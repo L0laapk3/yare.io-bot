@@ -38,19 +38,33 @@ void processAttacks() {
 	for (auto it = available.begin(); it < available.end(); it++) {
 		auto*& s = *it;
 		if (s->energy > 0) {
-			for (auto& base : bases) {
-				if (base.controlledBy != myPlayerId && base.controlledBy != -1)
-					if (dist(*s, base) <= s->range) {
-						s->attack(base);
-						continue;
-					}
-			}
 			for (auto*& t : enemiesSort)
 				if (t->energy >= (t->ds <= 200 || t->des <= 200 ? -t->size : 0) && dist(*s, *t) <= s->range) {
 					s->attack(*t);
 					s->shout("⚔️");
 					break;
 				}
+			for (auto& outpost : outposts) {
+				if (outpost.controlledBy != myPlayerId && outpost.controlledBy != -1 && outpost.energy > 0)
+					if (dist(*s, outpost) <= s->range) {
+						s->attack(outpost);
+						continue;
+					}
+			}
+			for (auto& base : bases) {
+				if (base.controlledBy != myPlayerId && base.controlledBy != -1 && base.energy > 0)
+					if (dist(*s, base) <= s->range) {
+						s->attack(base);
+						continue;
+					}
+			}
+			for (auto& pylon : pylons) {
+				if (pylon.controlledBy != myPlayerId && pylon.controlledBy != -1 && pylon.energy > 0)
+					if (dist(*s, pylon) <= s->range) {
+						s->attack(pylon);
+						continue;
+					}
+			}
 		}
 	}
 }
@@ -176,23 +190,33 @@ void attack() {
 	for (auto*& s : available) {
 		ChargeTarget* closestTarget = nullptr;
 		float closestTargetDistance = std::numeric_limits<float>::infinity();
-		for (auto& base : bases) {
-			if (base.controlledBy == myPlayerId || base.controlledBy == -1)
+		for (auto& outpost : outposts) {
+			if (outpost.controlledBy == myPlayerId || outpost.controlledBy == -1)
 				continue;
-			float d = dist(base, *s);
+			float d = dist(outpost, *s);
 			if (d < closestTargetDistance) {
 				closestTargetDistance = d;
-				closestTarget = &base;
+				closestTarget = &outpost;
 			}
 		}
 		if (!closestTarget)
-			for (auto& outpost : outposts) {
-				if (outpost.controlledBy == myPlayerId || outpost.controlledBy == -1)
+			for (auto& base : bases) {
+				if (base.controlledBy == myPlayerId || base.controlledBy == -1)
 					continue;
-				float d = dist(outpost, *s);
+				float d = dist(base, *s);
 				if (d < closestTargetDistance) {
 					closestTargetDistance = d;
-					closestTarget = &outpost;
+					closestTarget = &base;
+				}
+			}
+		if (!closestTarget)
+			for (auto& pylon : pylons) {
+				if (pylon.controlledBy == myPlayerId || pylon.controlledBy == -1)
+					continue;
+				float d = dist(pylon, *s);
+				if (d < closestTargetDistance) {
+					closestTargetDistance = d;
+					closestTarget = &pylon;
 				}
 			}
 

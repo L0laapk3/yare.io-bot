@@ -26,17 +26,27 @@ struct Star : public Object {
 	float usedEnergyGeneration = 0;
 };
 
+
 struct MySpirit;
 struct ChargeTarget : public Object {
+	enum Type {
+		BASE,
+		OUTPOST,
+		PYLON,
+	};
 	char* name();
 	int energyCapacity;
 	int energy;
 	int controlledBy;
+	bool isFriendly();
 	int index;
-	bool isOutpost = false;
+	Type type;
+
+	void energizeResolveIntf(int sindex);
 };
 
 struct Base : public ChargeTarget {
+	constexpr static Type TYPE = Type::BASE;
 	char* name();
 	static int spiritCost(Shape shape, int totalTeamSpirits);
 	template<Shape shape>
@@ -44,11 +54,20 @@ struct Base : public ChargeTarget {
 };
 
 struct Outpost : public ChargeTarget {
+	constexpr static Type TYPE = Type::OUTPOST;
 	char* name();
 	float range;
 
 	float strength();
-	bool isFriendly();
+};
+
+struct Pylon : public ChargeTarget {
+	constexpr static Type TYPE = Type::PYLON;
+	char* name();
+	constexpr static float minRange = 200.f;
+	constexpr static float maxRange = 400.f;
+
+	float strength();
 };
 
 struct Spirit : public Object {
@@ -106,6 +125,7 @@ extern int currentTick;
 extern std::vector<Star> stars;
 extern std::vector<Base> bases;
 extern std::vector<Outpost> outposts;
+extern std::vector<Pylon> pylons;
 extern std::vector<MySpirit> units;
 extern std::vector<MySpirit*> available;
 extern std::vector<EnemySpirit> enemies;

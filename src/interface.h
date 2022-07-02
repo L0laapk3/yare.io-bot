@@ -31,6 +31,7 @@ namespace Interface {
 		IMPORT("spirits", "energize") void energize(int, int);
 		IMPORT("spirits", "energizeBase") void energizeBase(int, int);
 		IMPORT("spirits", "energizeOutpost") void energizeOutpost(int, int);
+		IMPORT("spirits", "energizePylon") void energizePylon(int, int);
 		IMPORT("spirits", "move") void move(int, float, float);
 		IMPORT("spirits", "merge") void merge(int, int);
 		IMPORT("spirits", "divide") void divide(int);
@@ -52,19 +53,6 @@ namespace Interface {
 		IMPORT("bases", "controlledBy") int controlledBy(int);
 	};
 
-	namespace Star {
-		IMPORT("stars", "count") int count();
-		IMPORT("stars", "nameAlloc") char* nameAlloc(int);
-		IMPORT("stars", "positionX") float positionX(int);
-		IMPORT("stars", "positionY") float positionY(int);
-		// IMPORT("stars", "position") Position position(int);
-		inline Position position(int i) { return Position{ positionX(i), positionY(i) }; }
-		IMPORT("stars", "energyCapacity") int energyCapacity(int);
-		IMPORT("stars", "energy") int energy(int);
-		IMPORT("stars", "energyGenFlat") int energyGenFlat(int);
-		IMPORT("stars", "energyGenScaling") float energyGenScaling(int);
-	};
-
 	namespace Outpost {
 		IMPORT("outposts", "count") int count();
 		IMPORT("outposts", "nameAlloc") char* nameAlloc(int);
@@ -76,6 +64,31 @@ namespace Interface {
 		IMPORT("outposts", "energy") int energy(int);
 		IMPORT("outposts", "range") float range(int);
 		IMPORT("outposts", "controlledBy") int controlledBy(int);
+	};
+
+	namespace Pylon {
+		IMPORT("pylons", "count") int count();
+		IMPORT("pylons", "nameAlloc") char* nameAlloc(int);
+		IMPORT("pylons", "positionX") float positionX(int);
+		IMPORT("pylons", "positionY") float positionY(int);
+		// IMPORT("pylons", "position") Position position(int);
+		inline Position position(int i) { return Position{ positionX(i), positionY(i) }; }
+		IMPORT("pylons", "energyCapacity") int energyCapacity(int);
+		IMPORT("pylons", "energy") int energy(int);
+		IMPORT("pylons", "controlledBy") int controlledBy(int);
+	};
+
+	namespace Star {
+		IMPORT("stars", "count") int count();
+		IMPORT("stars", "nameAlloc") char* nameAlloc(int);
+		IMPORT("stars", "positionX") float positionX(int);
+		IMPORT("stars", "positionY") float positionY(int);
+		// IMPORT("stars", "position") Position position(int);
+		inline Position position(int i) { return Position{ positionX(i), positionY(i) }; }
+		IMPORT("stars", "energyCapacity") int energyCapacity(int);
+		IMPORT("stars", "energy") int energy(int);
+		IMPORT("stars", "energyGenFlat") int energyGenFlat(int);
+		IMPORT("stars", "energyGenScaling") float energyGenScaling(int);
 	};
 
 	namespace Player {
