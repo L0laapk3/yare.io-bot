@@ -56,13 +56,14 @@ void parseTick(int tick) {
 
 	int oCount = Interface::Outpost::count();
 	for (int i = 0; i < oCount; i++) {
-		outposts.emplace_back(Outpost{
-			Interface::Outpost::position(i),
-			Interface::Outpost::energyCapacity(i),
-			Interface::Outpost::energy(i),
-			Interface::Outpost::controlledBy(i),
-			.range = Interface::Outpost::range(i),
-		});
+		Outpost outpost;
+		outpost.index = i;
+		outpost.position = Interface::Outpost::position(i);
+		outpost.energyCapacity = Interface::Outpost::energyCapacity(i);
+		outpost.energy = Interface::Outpost::energy(i);
+		outpost.controlledBy = Interface::Outpost::controlledBy(i);
+		outpost.range = Interface::Outpost::range(i);
+		outposts.emplace_back(outpost);
 	}
 
 	int stCount = Interface::Star::count();
@@ -134,6 +135,13 @@ Object::operator Position() {
 	return position;
 }
 
+
+void Base::intf_energizedBy(MySpirit& s) {
+	Interface::Spirit::energizeBase(s.index, index);
+}
+void Outpost::intf_energizedBy(MySpirit& s) {
+	Interface::Spirit::energizeOutpost(s.index, index);
+}
 
 template<>
 int Base::spiritCost<Shape::Circle>(int spirits) {
@@ -207,19 +215,15 @@ void MySpirit::energize(MySpirit& s) {
 	usedEnergize = true;
 }
 
-template<typename T>
-void MySpirit::energize(T& b) {
-	_energizeBase(b);
-	b.energy = std::min(b.energy + std::min(energy, size), b.energyCapacity);
+void MySpirit::energize(ChargeTarget* b) {
+	b->intf_energizedBy(*this);
+	b->energy = std::min(b->energy + std::min(energy, size), b->energyCapacity);
 	energy -= std::min(energy, size);
 	usedEnergize = true;
 }
-template void MySpirit::energize(Base& b);
-
-
-void MySpirit::attackBase(Base& b) {
-	_energizeBase(b);
-	b.energy -= 2 * std::min(energy, size);
+void MySpirit::attack(ChargeTarget* b) {
+	b->intf_energizedBy(*this);
+	b->energy -= 2 * std::min(energy, size);
 	energy -= std::min(energy, size);
 	usedEnergize = true;
 }

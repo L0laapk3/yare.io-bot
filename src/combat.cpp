@@ -13,6 +13,7 @@ void processAttacks() {
 
 	for (auto& s : enemies)
 		if (s.energy > 0) {
+			// predict enemy energy loss when they are in range for something to attack
 			for (auto& base : bases)
 				if (base.controlledBy == myPlayerId && dist(s, base) <= s.range)
 					goto attack;
@@ -26,7 +27,7 @@ void processAttacks() {
 		}
 		
 
-	// might be a bit, hopefully its ok
+	// might be a bit excessive, should be ok tho
 	std::sort(enemiesSort.begin(), enemiesSort.end(), [](auto*& a, auto*& b){
 		return a->energy < b->energy;
 	});
@@ -40,7 +41,7 @@ void processAttacks() {
 			for (auto& base : bases) {
 				if (base.controlledBy != myPlayerId && base.controlledBy != -1)
 					if (dist(*s, base) <= s->range) {
-						s->attackBase(base);
+						s->attack(&base);
 						continue;
 					}
 			}
@@ -69,10 +70,11 @@ void attackOrCharge(MySpirit& s, const Position& target) {
 	if (closestStarDistance < 200 && s.energy < s.energyCapacity)
 		s.charge(*closestStar);
 
+	// if closer and more favorable to charge at star before going to target
 	if (std::max(closestStarDistance - 200, 1.f) * s.energy < std::max(dist(s, target) - 200, 1.f) * (s.energyCapacity - s.energy))
-		s.safeMove(inDirection(*closestStar, closestStarDistance > 180 ? s : target, 179.9));
+		s.safeMove(inDirection(*closestStar, closestStarDistance > 180 ? s : target, 179.9)); // 180 distance from star
 	else
-		s.safeMove(inDirection(target, s, 179.9));
+		s.safeMove(inDirection(target, s, 179.9)); // 180 distance from target
 }
 
 

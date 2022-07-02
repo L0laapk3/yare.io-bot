@@ -56,8 +56,7 @@ int tippingPoint(Shape shape, float farmEfficiency, Star& star, bool greedy) {
 
 
 int loss1 = 0, loss2 = 0;
-template<typename T>
-void farmStar(std::vector<MySpirit*>& farmers, T& target, Star& star, bool greedy) {
+void farmStar(std::vector<MySpirit*>& farmers, ChargeTarget* target, Star& star, bool greedy) {
 	if (farmers.size() <= 0)
 		return;
 
@@ -71,19 +70,19 @@ void farmStar(std::vector<MySpirit*>& farmers, T& target, Star& star, bool greed
 		if (d + 199.9f <= oRange)
 			return;
 		auto proj = os * (oRange*oRange - 199.9f*199.f - dot(os, os)) / (2 * dot(os, os));
-		auto orth = sqrtf(199.9f*199.9f - dot(proj, proj)) * rot90(normalize(os), target - star);
+		auto orth = sqrtf(199.9f*199.9f - dot(proj, proj)) * rot90(normalize(os), *target - star);
 		P2B = star + proj + orth;
 	} else
-		P2B = star + normalize(target - star) * 199.9f;
+		P2B = star + normalize(*target - star) * 199.9f;
 
-	float P2BsDist = dist(target, P2B);
+	float P2BsDist = dist(*target, P2B);
 
 	int numChains = ceilf((P2BsDist - 19.9f * 6) / 199.9f - 1);
 
 	int travelTime = std::max((int)ceilf((P2BsDist - 199.9f * (1 + numChains)) / 19.9f) - 1, 0);
 
 
-	auto bP2BNorm = normalize(target - P2B);
+	auto bP2BNorm = normalize(*target - P2B);
 	auto P2A = P2B + bP2BNorm * 19.9f * (1 + travelTime);
 	auto P1 = P2A + bP2BNorm * 199.9f;
 
@@ -99,11 +98,11 @@ void farmStar(std::vector<MySpirit*>& farmers, T& target, Star& star, bool greed
 		return;
 		
 	std::partial_sort(farmers.begin(), farmersEnd, farmers.end(), [&](auto*& a, auto*& b) {
-		return dist(*a, target) + dist(star, *a) < dist(*b, target) + dist(*b, star);
+		return dist(*a, *target) + dist(star, *a) < dist(*b, *target) + dist(*b, star);
 	});
 
 	std::sort(farmers.begin(), farmersEnd, [&](auto*& a, auto*& b){
-		return dist(*a, target) - dist(star, *a) < dist(*b, target) - dist(*b, star);
+		return dist(*a, *target) - dist(star, *a) < dist(*b, *target) - dist(*b, star);
 	});
 
 	for (auto it = farmers.begin(); it < farmersEnd; it++)
@@ -113,9 +112,9 @@ void farmStar(std::vector<MySpirit*>& farmers, T& target, Star& star, bool greed
 	auto farmers1End = farmers.begin();
 	int count1;
 	Position haulA, targetA;
-	if (farmers.size() < 3 || (farmerCount == 3 && target.energy <= 1.8 * farmers[0]->energyCapacity)) {
+	if (farmers.size() < 3 || (farmerCount == 3 && target->energy <= 1.8 * farmers[0]->energyCapacity)) {
 		haulA = P1;
-		targetA = target;
+		targetA = *target;
 		count1 = 0;
 	} else {
 		haulA = P2A;
@@ -128,7 +127,7 @@ void farmStar(std::vector<MySpirit*>& farmers, T& target, Star& star, bool greed
 
 			int oldCount1 = 0;
 			for (; oldCount1 < farmerCount; oldCount1++)
-				if (dist(*farmers[oldCount1], target) - dist(star, *farmers[oldCount1]) > -P2BsDist + 200)
+				if (dist(*farmers[oldCount1], *target) - dist(star, *farmers[oldCount1]) > -P2BsDist + 200)
 					break;
 			int oldCount2 = farmerCount - oldCount1;
 			if (oldCount2 > farmerCount - count1 && farmerCount != maxFarmers)
@@ -146,7 +145,7 @@ void farmStar(std::vector<MySpirit*>& farmers, T& target, Star& star, bool greed
 		auto*& s = *sIt;
 		while (tIt < farmersEnd) {
 			auto *& t = *tIt;
-			if (dist(*s, target) + 5 <= dist(*t, target))
+			if (dist(*s, *target) + 5 <= dist(*t, *target))
 				break;
 			tIt++;
 		}
@@ -162,13 +161,13 @@ void farmStar(std::vector<MySpirit*>& farmers, T& target, Star& star, bool greed
 		// 	println("%i %f", s->usedEnergize, dist(*s, target));
 		if (s->usedEnergize)
 			continue;
-		if (s->energy > 0 && dist(*s, target) <= 200) {
-			s->energize<T>(target);
+		if (s->energy > 0 && dist(*s, *target) <= 200) {
+			s->energize(target);
 		} else if (s->energy + s->size <= s->energyCapacity && dist(star, *s) <= 200)
 			s->charge(star);
 		else {
 			while (tStartIt < sIt) {
-				if (dist(**tStartIt, target) + 200 >= dist(*s, target))
+				if (dist(**tStartIt, *target) + 200 >= dist(*s, *target))
 					break;
 				tStartIt++;
 			}
@@ -186,10 +185,10 @@ void farmStar(std::vector<MySpirit*>& farmers, T& target, Star& star, bool greed
 				// find swap to maintain energy order
 				auto kIt = tIt + 2;
 				for (; kIt < farmersEnd; kIt++)
-					if ((*kIt)->energy >= t->energy || dist(*t, target) + 5 <= dist(**kIt, target))
+					if ((*kIt)->energy >= t->energy || dist(*t, *target) + 5 <= dist(**kIt, *target))
 						break;
 				auto*& k = *--kIt;
-				if (k->energy < t->energy && dist(*t, target) + 5 > dist(*k, target))
+				if (k->energy < t->energy && dist(*t, *target) + 5 > dist(*k, *target))
 					std::iter_swap(tIt, kIt);
 				break;
 			}
@@ -199,7 +198,7 @@ void farmStar(std::vector<MySpirit*>& farmers, T& target, Star& star, bool greed
 	if (count1 != 0) {
 		auto f1it = farmers.begin();
 		for (int i = 0; i < numChains; i++) {
-			auto transferTo = i == 0 ? target : P1 + (numChains - i) * 199.9f * bP2BNorm;
+			auto transferTo = i == 0 ? *target : P1 + (numChains - i) * 199.9f * bP2BNorm;
 			auto afkPoint = P1 + (numChains - i - 1) * 199.9f * bP2BNorm;
 			for (; f1it < farmers1End - count1 * (numChains - i - 1) / numChains; f1it++) {
 				auto* s = *f1it;
@@ -220,7 +219,7 @@ void farmStar(std::vector<MySpirit*>& farmers, T& target, Star& star, bool greed
 				s->safeMove(dist(star, *s) > 200 && s->energy > 0 ? inDirection(star, *s, 199.9f) : P2B);
 			} else {
 				bool tempf1 = false;
-				if (s->energy != 0 && dist(*s, target) <= 200 && farmers1End == farmers.begin()) {
+				if (s->energy != 0 && dist(*s, *target) <= 200 && farmers1End == farmers.begin()) {
 					tempf1 = true;
 					for (auto j = farmers.begin(); j < farmers1End; j++)
 						if (dist(*s, **j) <= 200) {
@@ -229,7 +228,7 @@ void farmStar(std::vector<MySpirit*>& farmers, T& target, Star& star, bool greed
 						}
 				}
 				if (tempf1)
-					s->safeMove(inDirection(target, star, 199.9f));
+					s->safeMove(inDirection(*target, star, 199.9f));
 				else
 					s->safeMove(dist(*s, targetA) > 200 && s->energy > 0 ? inDirection(targetA, *s, 199.9f) : haulA);
 			}
@@ -244,7 +243,7 @@ void farmStar(std::vector<MySpirit*>& farmers, T& target, Star& star, bool greed
 
 struct BaseStar {
 	Star* star;
-	Base* base;
+	ChargeTarget* base;
 	float efficiency;
 	std::vector<MySpirit*> closestSpirits;
 };
@@ -295,9 +294,9 @@ void farm() {
 
 		int numSpirits = pair.closestSpirits.size();
 
-		farmStar(pair.closestSpirits, *pair.base, *pair.star, false);
+		farmStar(pair.closestSpirits, pair.base, *pair.star, false);
 		
-		println("pair star %i, base %i, eff %f: %i/%i spirits used", pair.star->index, pair.base->index, pair.efficiency, numSpirits - pair.closestSpirits.size(), numSpirits);
+		println("pair star %i, eff %f: %i/%i spirits used", pair.star->index, pair.efficiency, numSpirits - pair.closestSpirits.size(), numSpirits);
 
 
 		if (baseStarPairs.size() > 0)

@@ -29,6 +29,7 @@ namespace Interface {
 
 		IMPORT("spirits", "energize") void energize(int, int);
 		IMPORT("spirits", "energizeBase") void energizeBase(int, int);
+		IMPORT("spirits", "energizeOutpost") void energizeOutpost(int, int);
 		IMPORT("spirits", "move") void move(int, float, float);
 		IMPORT("spirits", "merge") void merge(int, int);
 		IMPORT("spirits", "divide") void divide(int);
