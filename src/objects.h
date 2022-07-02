@@ -26,14 +26,13 @@ struct ChargeTarget : public Object {
 	int energy;
 	int controlledBy;
 	int index;
-	virtual void intf_energizedBy(MySpirit& s) = 0;
+	bool isOutpost = false;
 };
 
 struct Base : public ChargeTarget {
 	static int spiritCost(Shape shape, int totalTeamSpirits);
 	template<Shape shape>
 	static int spiritCost(int totalTeamSpirits);
-	void intf_energizedBy(MySpirit& s) override;
 };
 
 struct Outpost : public ChargeTarget {
@@ -41,7 +40,6 @@ struct Outpost : public ChargeTarget {
 
 	float strength();
 	bool isFriendly();
-	void intf_energizedBy(MySpirit& s) override;
 };
 
 struct Spirit : public Object {
@@ -74,8 +72,8 @@ struct MySpirit : public Spirit {
 	void charge(Star&);
 	void attack(EnemySpirit&);
 	void energize(MySpirit&);
-	void energize(ChargeTarget*);
-	void attack(ChargeTarget*);
+	void energize(ChargeTarget&);
+	void attack(ChargeTarget&);
 	void move(const Position&);
 	void merge(const Spirit&);
 	void divide();

@@ -63,6 +63,7 @@ void parseTick(int tick) {
 		outpost.energy = Interface::Outpost::energy(i);
 		outpost.controlledBy = Interface::Outpost::controlledBy(i);
 		outpost.range = Interface::Outpost::range(i);
+		outpost.isOutpost = true;
 		outposts.emplace_back(outpost);
 	}
 
@@ -136,13 +137,6 @@ Object::operator Position() {
 }
 
 
-void Base::intf_energizedBy(MySpirit& s) {
-	Interface::Spirit::energizeBase(s.index, index);
-}
-void Outpost::intf_energizedBy(MySpirit& s) {
-	Interface::Spirit::energizeOutpost(s.index, index);
-}
-
 template<>
 int Base::spiritCost<Shape::Circle>(int spirits) {
 	if (spirits > 200)
@@ -215,15 +209,21 @@ void MySpirit::energize(MySpirit& s) {
 	usedEnergize = true;
 }
 
-void MySpirit::energize(ChargeTarget* b) {
-	b->intf_energizedBy(*this);
-	b->energy = std::min(b->energy + std::min(energy, size), b->energyCapacity);
+void MySpirit::energize(ChargeTarget& b) {
+	if (!b.isOutpost)
+		Interface::Spirit::energizeBase(index, b.index);
+	else
+		Interface::Spirit::energizeOutpost(index, b.index);
+	b.energy = std::min(b.energy + std::min(energy, size), b.energyCapacity);
 	energy -= std::min(energy, size);
 	usedEnergize = true;
 }
-void MySpirit::attack(ChargeTarget* b) {
-	b->intf_energizedBy(*this);
-	b->energy -= 2 * std::min(energy, size);
+void MySpirit::attack(ChargeTarget& b) {
+	if (!b.isOutpost)
+		Interface::Spirit::energizeBase(index, b.index);
+	else
+		Interface::Spirit::energizeOutpost(index, b.index);
+	b.energy -= 2 * std::min(energy, size);
 	energy -= std::min(energy, size);
 	usedEnergize = true;
 }

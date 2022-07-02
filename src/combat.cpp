@@ -41,7 +41,7 @@ void processAttacks() {
 			for (auto& base : bases) {
 				if (base.controlledBy != myPlayerId && base.controlledBy != -1)
 					if (dist(*s, base) <= s->range) {
-						s->attack(&base);
+						s->attack(base);
 						continue;
 					}
 			}
