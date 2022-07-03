@@ -3,6 +3,7 @@
 #include "interface.h"
 
 #include <vector>
+#include <utility>
 #include <map>
 
 
@@ -51,6 +52,7 @@ struct Base : public ChargeTarget {
 	static int spiritCost(Shape shape, int totalTeamSpirits);
 	template<Shape shape>
 	static int spiritCost(int totalTeamSpirits);
+	std::vector<std::pair<int, int>> spiritCosts;
 };
 
 struct Outpost : public ChargeTarget {
@@ -87,6 +89,8 @@ struct Spirit : public Object {
 	float strength();
 	float maxStrength();
 };
+
+int shapeSize(Shape& shape);
 
 
 struct EnemySpirit : public Spirit {

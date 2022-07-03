@@ -34,12 +34,12 @@ int tippingPoint(Shape shape, float farmEfficiency, Star& star, bool greedy) {
 	}
 
 	int starEnergyProduction = star.energyGenFlat + (int)std::roundf(star.energyCapacity * star.energyGenScaling);
-	int farmers = starEnergyProduction / farmEfficiency; // number of farmers needed to harvest the full energy production
+	int farmers = starEnergyProduction / farmEfficiency / shapeSize(shape); // number of farmers needed to harvest the full energy production
 	float energy = star.energyCapacity - Base::spiritCost(shape, farmers);
 	float spawnEnergy = 0;
 
 	while (energy > star.energy) {
-		float farmConsumption = farmEfficiency * farmers;
+		float farmConsumption = farmEfficiency * farmers * shapeSize(shape);
 		starEnergyProduction = star.energyGenFlat + (int)std::roundf((energy - starEnergyProduction + farmConsumption) * star.energyGenScaling);
 		energy -= starEnergyProduction;
 		energy += farmConsumption;
@@ -56,6 +56,17 @@ int tippingPoint(Shape shape, float farmEfficiency, Star& star, bool greedy) {
 
 
 
+float greedyStrength(Shape& shape) {
+	switch (shape) {
+	case Shape::CIRCLE:
+		return 250.f;
+	case Shape::SQUARE:
+		return 100.f;
+	case Shape::TRIANGLE:
+		return 230.f;
+	}
+}
+
 
 struct BaseStar {
 	Star* star;
@@ -64,23 +75,25 @@ struct BaseStar {
 	std::vector<MySpirit*> closestSpirits;
 };
 
-int loss1 = 0, loss2 = 0;
 void farmPair(std::vector<MySpirit*>& farmers, BaseStar& pair, bool greedy) {
-	if (farmers.size() <= 0)
+	if (farmers.size() <= 0) {
+		println("pair %s -> %s, 0/0 (%i) prio %f", pair.star->name(), pair.base->name(), available.size(), pair.prio);
 		return;
+	}
 
 	auto& star = *pair.star;
 	auto& target = *pair.base;
 
 	Position P2B;
 	Outpost& outpost = outposts[0];
-	// println("%i %i %i", dist(outpost, star) <= outpost.range, outpost.energy, outpost.isFriendly());
 	float oRange = outpost.range + .1f;
 	if (dist(outpost, star) <= oRange && outpost.energy > 0 && !outpost.isFriendly()) {
 		auto os = star - outpost;
 		float d = norm(os);
-		if (d + 199.9f <= oRange)
+		if (d + 199.9f <= oRange) {
+			println("pair %s -> %s, 0/0 (%i) prio %f", pair.star->name(), pair.base->name(), available.size(), pair.prio);
 			return;
+		}
 		auto proj = os * (oRange*oRange - 199.9f*199.f - dot(os, os)) / (2 * dot(os, os));
 		auto orth = sqrtf(199.9f*199.9f - dot(proj, proj)) * rot90(normalize(os), target - star);
 		P2B = star + proj + orth;
@@ -92,7 +105,6 @@ void farmPair(std::vector<MySpirit*>& farmers, BaseStar& pair, bool greedy) {
 	int numChains = ceilf((P2BsDist - 19.9f * 6) / 199.9f - 1);
 
 	int travelTime = std::max((int)ceilf((P2BsDist - 199.9f * (1 + numChains)) / 19.9f) - 1, 0);
-
 
 	auto bP2BNorm = normalize(target - P2B);
 	auto P2A = P2B + bP2BNorm * 19.9f * (1 + travelTime);
@@ -109,9 +121,10 @@ void farmPair(std::vector<MySpirit*>& farmers, BaseStar& pair, bool greedy) {
 	int farmerCount = std::min<int>(maxFarmers, farmers.size());
 	// println("max: dep: %i lim: %i (%i %i) cnt %i", maxFarmersDeplete, maxFarmersEnergy, farmers.size());
 	auto farmersEnd = farmers.begin() + farmerCount;
-	// println("dist: %f, numChains: %i, travelTime: %i, farmers: %i/%i%s", P2BsDist + 199.9f, numChains, travelTime, farmerCount, maxFarmers, preserve ? "p" : "");
-	if (farmerCount <= 0)
+	if (farmerCount <= 0) {
+		println("pair %s -> %s, 0/0 (%i) prio %f", pair.star->name(), pair.base->name(), available.size(), pair.prio);
 		return;
+	}
 		
 	std::partial_sort(farmers.begin(), farmersEnd, farmers.end(), [&](auto*& a, auto*& b) {
 		return dist(*a, target) + dist(star, *a) < dist(*b, target) + dist(*b, star);
@@ -123,7 +136,6 @@ void farmPair(std::vector<MySpirit*>& farmers, BaseStar& pair, bool greedy) {
 
 	// for (auto it = farmers.begin(); it < farmersEnd; it++)
 	// 	(*it)->shout("🚜");
-
 
 	auto farmers1End = farmers.begin();
 	int count1;
@@ -255,7 +267,6 @@ void farmPair(std::vector<MySpirit*>& farmers, BaseStar& pair, bool greedy) {
 
 	
 	farmers.erase(farmers.begin(), farmersEnd);
-	// println("loss1: %i loss2: %i", loss1, loss2);
 }
 
 
@@ -266,6 +277,7 @@ constexpr float OUTPOST_OVER_BASE_PREFERENCE = 1.3f;
 
 std::vector<BaseStar> baseStarPairs{};
 void farm() {
+
 	baseStarPairs.clear();
 	baseStarPairs.reserve(stars.size());
 	for (auto& star : stars) {
@@ -281,6 +293,7 @@ void farm() {
 				pair.base = &base;
 			}
 		}
+
 		pair.prio = farmEfficiency(*pair.base, *pair.star);
 	}
 	
@@ -317,8 +330,9 @@ void farm() {
 	};
 
 
-	bool greedy = myStrength < 250;
-
+	bool greedy = myStrength < greedyStrength(units[0].shape);
+	println("strength: %f lim: %f", myStrength, greedyStrength(units[0].shape));
+ 
 	assignSpriritsToClosestPair(available);
 	while (baseStarPairs.size() > 0) {
 		std::sort(baseStarPairs.begin(), baseStarPairs.end(), [](const BaseStar& a, const BaseStar& b) { // most spirits at the end

@@ -49,6 +49,9 @@ void parseTick(int tick) {
 		base.type = Base::TYPE;
 		base.index = i;
 		// base.spiritCost = Interface::Base::currentSpiritCost(i);
+		base.spiritCosts = std::vector<std::pair<int, int>>(Interface::Base::spiritCostCount(i));
+		for (int j = 0; j < base.spiritCosts.size(); j++)
+			base.spiritCosts[base.spiritCosts.size() - 1 - j] = { Interface::Base::spiritCostTreshold(i, j), Interface::Base::spiritCostValue(i, j) };
 
 		if (base.controlledBy == myPlayerId)
 			bases.insert(bases.begin(), base);
@@ -150,9 +153,20 @@ Object::operator Position() {
 	return position;
 }
 
+int shapeSize(Shape& shape) {
+	switch (shape) {
+	case Shape::CIRCLE:
+		return 1;
+	case Shape::SQUARE:
+		return 10;
+	case Shape::TRIANGLE:
+		return 3;
+	}
+}
+
 
 template<>
-int Base::spiritCost<Shape::Circle>(int spirits) {
+int Base::spiritCost<Shape::CIRCLE>(int spirits) {
 	if (spirits > 200)
 		return 150;
 	if (spirits > 100)
@@ -162,7 +176,7 @@ int Base::spiritCost<Shape::Circle>(int spirits) {
 	return 25;
 }
 template<>
-int Base::spiritCost<Shape::Square>(int spirits) {
+int Base::spiritCost<Shape::SQUARE>(int spirits) {
 	if (spirits > 17)
 		return 700;
 	if (spirits > 10)
@@ -170,7 +184,7 @@ int Base::spiritCost<Shape::Square>(int spirits) {
 	return 360;
 }
 template<>
-int Base::spiritCost<Shape::Triangle>(int spirits) {
+int Base::spiritCost<Shape::TRIANGLE>(int spirits) {
 	if (spirits > 120)
 		return 300;
 	if (spirits > 30)
@@ -179,13 +193,13 @@ int Base::spiritCost<Shape::Triangle>(int spirits) {
 }
 int Base::spiritCost(Shape shape, int totalTeamSpirits) {
 	switch (shape) {
-		case Shape::Circle:
+		case Shape::CIRCLE:
 		default:
-			return spiritCost<Shape::Circle>(totalTeamSpirits);
-		case Shape::Square:
-			return spiritCost<Shape::Square>(totalTeamSpirits);
-		case Shape::Triangle:
-			return spiritCost<Shape::Triangle>(totalTeamSpirits);
+			return spiritCost<Shape::CIRCLE>(totalTeamSpirits);
+		case Shape::SQUARE:
+			return spiritCost<Shape::SQUARE>(totalTeamSpirits);
+		case Shape::TRIANGLE:
+			return spiritCost<Shape::TRIANGLE>(totalTeamSpirits);
 	}
 }
 
@@ -201,10 +215,10 @@ float Pylon::strength() {
 }
 
 float Spirit::strength() {
-	return energy * (shape == Shape::Square ? 112.f/200.f : 1.f);
+	return energy * (shape == Shape::SQUARE ? 112.f/200.f : 1.f);
 }
 float Spirit::maxStrength() {
-	return energyCapacity * (shape == Shape::Square ? 112.f/200.f : 1.f);
+	return energyCapacity * (shape == Shape::SQUARE ? 112.f/200.f : 1.f);
 }
 
 

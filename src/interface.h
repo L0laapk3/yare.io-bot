@@ -3,9 +3,9 @@
 #include "position.h"
 
 enum Shape {
-	Circle = 0,
-	Square = 1,
-	Triangle = 2,
+	CIRCLE = 0,
+	SQUARE = 1,
+	TRIANGLE = 2,
 };
 
 
@@ -49,8 +49,11 @@ namespace Interface {
 		inline Position position(int i) { return Position{ positionX(i), positionY(i) }; }
 		IMPORT("bases", "energyCapacity") int energyCapacity(int);
 		IMPORT("bases", "energy") int energy(int);
-		IMPORT("bases", "currentSpiritCost") int currentSpiritCost(int);
 		IMPORT("bases", "controlledBy") int controlledBy(int);
+		IMPORT("bases", "currentSpiritCost") int currentSpiritCost(int);
+		IMPORT("bases", "spiritCostCount") int spiritCostCount(int);
+		IMPORT("bases", "spiritCostTreshold") int spiritCostTreshold(int, int);
+		IMPORT("bases", "spiritCostValue") int spiritCostValue(int, int);
 	};
 
 	namespace Outpost {

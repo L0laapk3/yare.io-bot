@@ -101,7 +101,7 @@ void defend() {
 	constexpr int tooClose = 500;
 	std::vector<MySpirit*> defenders;
 	for (auto& t : enemies) {
-		if (t.db > 200 + tooClose + (t.shape == Shape::Square ? 300 : 0))
+		if (t.db > 200 + tooClose + (t.shape == Shape::SQUARE ? 300 : 0))
 			continue;
 		
 
