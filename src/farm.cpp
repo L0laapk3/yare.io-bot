@@ -25,28 +25,31 @@ float farmEfficiency(ChargeTarget& target, Star& star) {
 }
 
 
-int tippingPoint(Shape shape, float farmEfficiency, Star& star, bool greedy) {
+int tippingPoint(float farmEfficiency, Base* base, Star& star, bool greedy) {
 	// start off at max energy and simulate backwards
 
-	if (greedy) {
+	if (greedy || base == nullptr) {
+		println("gen %i %f", star.energyGenFlat, star.energyGenScaling);
 		int starEnergyProduction = star.energyGenFlat + (int)std::roundf(star.energy * star.energyGenScaling);
 		return starEnergyProduction / farmEfficiency;
 	}
 
 	int starEnergyProduction = star.energyGenFlat + (int)std::roundf(star.energyCapacity * star.energyGenScaling);
-	int farmers = starEnergyProduction / farmEfficiency / shapeSize(shape); // number of farmers needed to harvest the full energy production
-	float energy = star.energyCapacity - Base::spiritCost(shape, farmers);
+	int farmers = starEnergyProduction / farmEfficiency / shapeSize(base->shape); // number of farmers needed to harvest the full energy production
+	float energy = star.energyCapacity - base->spiritCost(farmers);
 	float spawnEnergy = 0;
 
+	println("%i %i %i", shapeSize(base->shape), base->spiritCost(farmers), farmers);
+
 	while (energy > star.energy) {
-		float farmConsumption = farmEfficiency * farmers * shapeSize(shape);
+		float farmConsumption = farmEfficiency * farmers * shapeSize(base->shape);
 		starEnergyProduction = star.energyGenFlat + (int)std::roundf((energy - starEnergyProduction + farmConsumption) * star.energyGenScaling);
 		energy -= starEnergyProduction;
 		energy += farmConsumption;
 		spawnEnergy -= farmConsumption;
 		if (spawnEnergy <= 0) { // a unit had spawned, simulate in reverse
 			farmers--;
-			spawnEnergy += Base::spiritCost(shape, farmers);
+			spawnEnergy += base->spiritCost(farmers);
 		}
 		// println("%i %f %f %i", farmers, energy, farmers * perfectEfficiency, starEnergyProduction);
 	}
@@ -58,6 +61,7 @@ int tippingPoint(Shape shape, float farmEfficiency, Star& star, bool greedy) {
 
 float greedyStrength(Shape& shape) {
 	switch (shape) {
+	default:
 	case Shape::CIRCLE:
 		return 250.f;
 	case Shape::SQUARE:
@@ -114,8 +118,10 @@ void farmPair(std::vector<MySpirit*>& farmers, BaseStar& pair, bool greedy) {
 	float perfectEfficiency = 10.f / (10 * numChains + farmer2CycleTime);
 	constexpr float MAX_WORKERS_PER_REMAINING_ENERGY = 0.02f;
 
+	println("%i", target.type == Base::TYPE);
+
 	int starEnergyProduction = star.energyGenFlat + (int)std::roundf(star.energy * star.energyGenScaling);
-	int maxFarmersDeplete = tippingPoint(farmers[0]->shape, farmEfficiency(numChains, travelTime), star, greedy || target.type != Base::TYPE);
+	int maxFarmersDeplete = tippingPoint(farmEfficiency(numChains, travelTime), target.type == Base::TYPE ? static_cast<Base*>(pair.base) : nullptr, star, greedy);
 	int maxFarmersEnergy = target.type != Base::TYPE && target.controlledBy == myPlayerId ? std::ceilf((target.energyCapacity - target.energy) / perfectEfficiency * MAX_WORKERS_PER_REMAINING_ENERGY) : 9999999;
 	int maxFarmers = std::min<int>({ maxFarmersDeplete, maxFarmersEnergy });
 	int farmerCount = std::min<int>(maxFarmers, farmers.size());

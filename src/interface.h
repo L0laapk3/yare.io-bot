@@ -2,7 +2,8 @@
 
 #include "position.h"
 
-enum Shape {
+enum Shape : int {
+	NEUTRAL = -1,
 	CIRCLE = 0,
 	SQUARE = 1,
 	TRIANGLE = 2,
@@ -47,6 +48,7 @@ namespace Interface {
 		IMPORT("bases", "positionY") float positionY(int);
 		// IMPORT("bases", "position") Position position(int);
 		inline Position position(int i) { return Position{ positionX(i), positionY(i) }; }
+		IMPORT("spirits", "shape") Shape shape(int);
 		IMPORT("bases", "energyCapacity") int energyCapacity(int);
 		IMPORT("bases", "energy") int energy(int);
 		IMPORT("bases", "controlledBy") int controlledBy(int);

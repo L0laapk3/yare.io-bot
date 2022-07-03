@@ -43,6 +43,7 @@ void parseTick(int tick) {
 	for (int i = 0; i < bCount; i++) {
 		Base base;
 		base.position = Interface::Base::position(i);
+		base.shape = Interface::Spirit::shape(i),
 		base.energyCapacity = Interface::Base::energyCapacity(i);
 		base.energy = Interface::Base::energy(i);
 		base.controlledBy = Interface::Base::controlledBy(i);
@@ -156,6 +157,7 @@ Object::operator Position() {
 int shapeSize(Shape& shape) {
 	switch (shape) {
 	case Shape::CIRCLE:
+	default:
 		return 1;
 	case Shape::SQUARE:
 		return 10;
@@ -169,18 +171,6 @@ int Base::spiritCost(int spirits) {
 		if (spirits >= spiritCosts[i].first)
 			return spiritCosts[i].second;
 	return spiritCosts.back().second;
-}
-
-int Base::spiritCost(Shape shape, int totalTeamSpirits) {
-	switch (shape) {
-		case Shape::CIRCLE:
-		default:
-			return spiritCost<Shape::CIRCLE>(totalTeamSpirits);
-		case Shape::SQUARE:
-			return spiritCost<Shape::SQUARE>(totalTeamSpirits);
-		case Shape::TRIANGLE:
-			return spiritCost<Shape::TRIANGLE>(totalTeamSpirits);
-	}
 }
 
 float Outpost::strength() {
