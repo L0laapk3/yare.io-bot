@@ -164,33 +164,13 @@ int shapeSize(Shape& shape) {
 	}
 }
 
+int Base::spiritCost(int spirits) {
+	for (int i = 0; i < spiritCosts.size() - 1; i++)
+		if (spirits >= spiritCosts[i].first)
+			return spiritCosts[i].second;
+	return spiritCosts.back().second;
+}
 
-template<>
-int Base::spiritCost<Shape::CIRCLE>(int spirits) {
-	if (spirits > 200)
-		return 150;
-	if (spirits > 100)
-		return 90;
-	if (spirits > 50)
-		return 50;
-	return 25;
-}
-template<>
-int Base::spiritCost<Shape::SQUARE>(int spirits) {
-	if (spirits > 17)
-		return 700;
-	if (spirits > 10)
-		return 500;
-	return 360;
-}
-template<>
-int Base::spiritCost<Shape::TRIANGLE>(int spirits) {
-	if (spirits > 120)
-		return 300;
-	if (spirits > 30)
-		return 160;
-	return 90;
-}
 int Base::spiritCost(Shape shape, int totalTeamSpirits) {
 	switch (shape) {
 		case Shape::CIRCLE:

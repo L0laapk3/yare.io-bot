@@ -49,8 +49,6 @@ struct ChargeTarget : public Object {
 struct Base : public ChargeTarget {
 	constexpr static Type TYPE = Type::BASE;
 	char* name();
-	static int spiritCost(Shape shape, int totalTeamSpirits);
-	template<Shape shape>
 	static int spiritCost(int totalTeamSpirits);
 	std::vector<std::pair<int, int>> spiritCosts;
 };
