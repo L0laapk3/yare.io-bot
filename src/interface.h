@@ -28,6 +28,8 @@ namespace Interface {
 		IMPORT("spirits", "id") int id(int);
 		IMPORT("spirits", "playerId") int playerId(int);
 		IMPORT("spirits", "hp") int hp(int);
+		IMPORT("spirits", "range") int range(int);
+		IMPORT("spirits", "locked") bool locked(int);
 
 		IMPORT("spirits", "energize") void energize(int, int);
 		IMPORT("spirits", "energizeBase") void energizeBase(int, int);
@@ -36,6 +38,8 @@ namespace Interface {
 		IMPORT("spirits", "move") void move(int, float, float);
 		IMPORT("spirits", "merge") void merge(int, int);
 		IMPORT("spirits", "divide") void divide(int);
+		IMPORT("spirits", "lock") void lock(int);
+		IMPORT("spirits", "unlock") void unlock(int);
 		IMPORT("spirits", "jump") void jump(int, float, float);
 		IMPORT("spirits", "explode") void explode(int);
 		IMPORT("spirits", "shout") void shout(int, const char*);

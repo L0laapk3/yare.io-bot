@@ -39,82 +39,25 @@ void parseTick(int tick) {
 	enemiesSort.clear();
 
 	int bCount = Interface::Base::count();
-
-	for (int i = 0; i < bCount; i++) {
-		Base base;
-		base.position = Interface::Base::position(i);
-		base.shape = Interface::Spirit::shape(i),
-		base.energyCapacity = Interface::Base::energyCapacity(i);
-		base.energy = Interface::Base::energy(i);
-		base.controlledBy = Interface::Base::controlledBy(i);
-		base.type = Base::TYPE;
-		base.index = i;
-		// base.spiritCost = Interface::Base::currentSpiritCost(i);
-		base.spiritCosts = std::vector<std::pair<int, int>>(Interface::Base::spiritCostCount(i));
-		for (int j = 0; j < base.spiritCosts.size(); j++)
-			base.spiritCosts[base.spiritCosts.size() - 1 - j] = { Interface::Base::spiritCostTreshold(i, j), Interface::Base::spiritCostValue(i, j) };
-
-		if (base.controlledBy == myPlayerId)
-			bases.insert(bases.begin(), base);
-		else
-			bases.push_back(base);
-	}
+	for (int i = 0; i < bCount; i++)
+		bases.push_back(Base::build(i));
 
 	int oCount = Interface::Outpost::count();
-	for (int i = 0; i < oCount; i++) {
-		Outpost outpost;
-		outpost.index = i;
-		outpost.position = Interface::Outpost::position(i);
-		outpost.energyCapacity = Interface::Outpost::energyCapacity(i);
-		outpost.energy = Interface::Outpost::energy(i);
-		outpost.controlledBy = Interface::Outpost::controlledBy(i);
-		outpost.range = Interface::Outpost::range(i);
-		outpost.type = Outpost::TYPE;
-		outposts.emplace_back(outpost);
-	}
+	for (int i = 0; i < oCount; i++)
+		outposts.emplace_back(Outpost::build(i));
 
 	int pCount = Interface::Outpost::count();
-	for (int i = 0; i < pCount; i++) {
-		Pylon pylon;
-		pylon.index = i;
-		pylon.position = Interface::Pylon::position(i);
-		pylon.energyCapacity = Interface::Pylon::energyCapacity(i);
-		pylon.energy = Interface::Pylon::energy(i);
-		pylon.controlledBy = Interface::Pylon::controlledBy(i);
-		pylon.type = Pylon::TYPE;
-		pylons.emplace_back(pylon);
-	}
+	for (int i = 0; i < pCount; i++)
+		pylons.emplace_back(Pylon::build(i));
 
 	int stCount = Interface::Star::count();
-	for (int i = 0; i < stCount; i++) {
-		Star star{
-			Interface::Star::position(i),
-			.energyCapacity = 1000,//Interface::Star::energyCapacity(i),
-			.energy = Interface::Star::energy(i),
-			.index = i
-		};
-		star.activatesIn = 0;
-		star.energyGenFlat = Interface::Star::energyGenFlat(i);
-		star.energyGenScaling = Interface::Star::energyGenScaling(i);
-		stars.emplace_back(star);
-	}
-	std::sort(stars.begin(), stars.end(), [&](auto& a, auto& b){
-		return dist(a, bases[0]) < dist(b, bases[0]);
-	});
+	for (int i = 0; i < stCount; i++)
+		stars.emplace_back(Star::build(i));
 
 	int sCount = Interface::Spirit::count();
 	for (int i = 0; i < sCount; i++) {
-		if (Interface::Spirit::hp(i) <= 0)
-			continue;
-		Spirit spirit{
-			Interface::Spirit::position(i),
-			.index = i,
-			.size = Interface::Spirit::size(i),
-			.shape = Interface::Spirit::shape(i),
-			.energyCapacity = Interface::Spirit::energyCapacity(i),
-			.energy = Interface::Spirit::energy(i),
-			.id = Interface::Spirit::id(i),
-		};
+		Spirit spirit = Spirit::build(i);
+
 		spirit.db = dist(spirit, bases[0]);
 		spirit.ds = dist(spirit, stars[0]);
 		spirit.deb = dist(spirit, bases[bCount-1]);
@@ -148,6 +91,71 @@ void parseTick(int tick) {
 	println("%.0f (%i) vs %.0f (%i) at tick %i", myStrength, units.size(), enemyStrength, enemies.size(), currentTick);
 }
 
+
+Base Base::build(int i) {
+	Base base;
+	base.position = Interface::Base::position(i);
+	base.shape = Interface::Base::shape(i),
+	base.energyCapacity = Interface::Base::energyCapacity(i);
+	base.energy = Interface::Base::energy(i);
+	base.controlledBy = Interface::Base::controlledBy(i);
+	base.type = Base::TYPE;
+	base.index = i;
+	// base.spiritCost = Interface::Base::currentSpiritCost(i);
+	base.spiritCosts = std::vector<std::pair<int, int>>(Interface::Base::spiritCostCount(i));
+	for (int j = 0; j < base.spiritCosts.size(); j++)
+		base.spiritCosts[base.spiritCosts.size() - 1 - j] = { Interface::Base::spiritCostTreshold(i, j), Interface::Base::spiritCostValue(i, j) };
+	return base;
+}
+Outpost Outpost::build(int i) {
+	Outpost outpost;
+	outpost.index = i;
+	outpost.position = Interface::Outpost::position(i);
+	outpost.energyCapacity = Interface::Outpost::energyCapacity(i);
+	outpost.energy = Interface::Outpost::energy(i);
+	outpost.controlledBy = Interface::Outpost::controlledBy(i);
+	outpost.range = Interface::Outpost::range(i);
+	outpost.type = Outpost::TYPE;
+	return outpost;
+}
+Pylon Pylon::build(int i) {
+	Pylon pylon;
+	pylon.index = i;
+	pylon.position = Interface::Pylon::position(i);
+	pylon.energyCapacity = Interface::Pylon::energyCapacity(i);
+	pylon.energy = Interface::Pylon::energy(i);
+	pylon.controlledBy = Interface::Pylon::controlledBy(i);
+	pylon.type = Pylon::TYPE;
+	return pylon;
+}
+Star Star::build(int i) {
+	Star star;
+	star.index = i;
+	star.position = Interface::Star::position(i);
+	star.energyCapacity = Interface::Star::energyCapacity(i);
+	star.energy = Interface::Star::energy(i);
+	star.activatesIn = 0;
+	star.energyGenFlat = Interface::Star::energyGenFlat(i);
+	star.energyGenScaling = Interface::Star::energyGenScaling(i);
+	return star;
+}
+Spirit Spirit::build(int i) {
+	Spirit spirit;
+	spirit.position = Interface::Spirit::position(i),
+	spirit.index = i;
+	spirit.size = Interface::Spirit::size(i);
+	spirit.shape = Interface::Spirit::shape(i);
+	spirit.energyCapacity = Interface::Spirit::energyCapacity(i);
+	spirit.energy = Interface::Spirit::energy(i);
+	spirit.id = Interface::Spirit::id(i);
+	spirit.locked = Interface::Spirit::locked(i);
+	spirit.range = Interface::Spirit::range(i);
+
+	spirit.minRange = spirit.shape == Shape::SQUARE ? 200 : spirit.range;
+	spirit.maxRange = spirit.shape == Shape::SQUARE ? 300 : spirit.range;
+	spirit.rangeGrowth = spirit.shape == Shape::SQUARE ? 25 : 0;
+	return spirit;
+}
 
 
 Object::operator Position() {

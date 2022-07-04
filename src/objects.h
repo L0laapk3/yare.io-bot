@@ -25,6 +25,8 @@ struct Star : public Object {
 
 // self defined
 	float usedEnergyGeneration = 0;
+
+	static Star build(int i);
 };
 
 
@@ -52,6 +54,8 @@ struct Base : public ChargeTarget {
 	Shape shape;
 	int spiritCost(int totalTeamSpirits);
 	std::vector<std::pair<int, int>> spiritCosts;
+
+	static Base build(int i);
 };
 
 struct Outpost : public ChargeTarget {
@@ -60,6 +64,8 @@ struct Outpost : public ChargeTarget {
 	float range;
 
 	float strength();
+
+	static Outpost build(int i);
 };
 
 struct Pylon : public ChargeTarget {
@@ -69,6 +75,8 @@ struct Pylon : public ChargeTarget {
 	constexpr static float maxRange = 400.f;
 
 	float strength();
+
+	static Pylon build(int i);
 };
 
 struct Spirit : public Object {
@@ -79,7 +87,14 @@ struct Spirit : public Object {
 	int energyCapacity;
 	int energy;
 	int id;
-	const int range = 200;
+	bool locked;
+	int range;
+	int minRange;
+	int maxRange;
+	int rangeGrowth;
+	
+	static constexpr int moveSpeed = 20;
+
 	float db;
 	float ds;
 	float deb;
@@ -87,6 +102,8 @@ struct Spirit : public Object {
 
 	float strength();
 	float maxStrength();
+
+	static Spirit build(int i);
 };
 
 int shapeSize(Shape& shape);
@@ -94,6 +111,8 @@ int shapeSize(Shape& shape);
 
 struct EnemySpirit : public Spirit {
 	Position velocity{ 0, 0 };
+
+	static EnemySpirit build(int i);
 };
 
 struct MySpirit : public Spirit {
@@ -119,6 +138,8 @@ struct MySpirit : public Spirit {
 
 // self defined functions
 	void safeMove(const Position& to);
+
+	static MySpirit build(int i);
 };
 
 

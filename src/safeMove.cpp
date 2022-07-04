@@ -84,12 +84,10 @@ void safeMoveReserve(int mySpiritCount, int enemySpiritCount, int outpostCount) 
 
 void MySpirit::safeMove(const Position& targetPosition) {
 
-	static constexpr float MAX_MOVE_DIST = 20;
-
 	float targetAngle = atan2(targetPosition - *this);
 	
-	auto lineStart = *this - MAX_MOVE_DIST * fromAngle(targetAngle);
-	auto lineEnd = *this + MAX_MOVE_DIST * fromAngle(targetAngle);
+	auto lineStart = *this - moveSpeed * fromAngle(targetAngle);
+	auto lineEnd = *this + moveSpeed * fromAngle(targetAngle);
 
 	anglePoints.clear();
 	anglePoints.emplace_back(AngleSweepPoint{
@@ -98,7 +96,7 @@ void MySpirit::safeMove(const Position& targetPosition) {
 	});
 	linePoints.clear();
 	linePoints.emplace_back(LineSweepPoint{
-		.distance = std::min<float>(2 * MAX_MOVE_DIST + F_EPS, dist(lineStart, targetPosition)),
+		.distance = std::min<float>(2 * moveSpeed + F_EPS, dist(lineStart, targetPosition)),
 		.type = SweepPointType::Target,
 	});
 	
@@ -108,41 +106,42 @@ void MySpirit::safeMove(const Position& targetPosition) {
 		auto*& other = *it;
 		float d = dist(*this, *other);
 
-		if (this != other && d < 2*2*MAX_MOVE_DIST) {
+		if (this != other && d < 2*(moveSpeed + other->moveSpeed)) {
 			float strength = other->strength();
 			if (d == 0) {
 				currentStrength += strength;
 				continue;
 			}
 			// angular sweep point
-			float offsetAngle = acosf(d / (2*2*MAX_MOVE_DIST));
+			float offsetAngle = acosf(d / (2*2*moveSpeed));
 			float centerAngle = atan2(*other - *this);
 			addAngleSweepPoints<true>(centerAngle, offsetAngle, strength, currentStrength);
 
 			// linear sweep point
 			auto projPoint = proj(*other - *this, lineEnd - lineStart);
 			float projDist = dist(projPoint, lineEnd);
-			if (projDist < 2*2*MAX_MOVE_DIST) {
+			if (projDist < 2*(moveSpeed + other->moveSpeed)) {
 				float lineDist = dist(*this, projPoint);
-				float lineOffset = sqrt((2*2*MAX_MOVE_DIST)*(2*2*MAX_MOVE_DIST) - projDist*projDist);
+				float lineOffset = sqrt((2*(moveSpeed + other->moveSpeed))*(2*(moveSpeed + other->moveSpeed)) - projDist*projDist);
 				addLineSweepPoints<true>(lineDist, lineOffset, strength);
 			}
 		}
 	}
 	for (auto& other : enemies) {
-		constexpr float attackDist = 200.1f + MAX_MOVE_DIST;
+		const float attackRange = other.range + (other.maxRange - other.range) / (other.rangeGrowth - moveSpeed);
+		const float attackDist = attackRange + other.moveSpeed + F_EPS;
 		float d = dist(*this, other);
 		float strength = other.strength();
-		if (d >= attackDist + MAX_MOVE_DIST)
+		if (d >= attackDist + moveSpeed)
 			continue; // never in range
 			
 		currentStrength -= strength;
 
-		if (d <= attackDist - MAX_MOVE_DIST) 
+		if (d <= attackDist - moveSpeed) 
 			continue; // always in range
 
 		// angular sweep point
-		float offsetAngle = acosf((d - attackDist - MAX_MOVE_DIST) / (2*MAX_MOVE_DIST));
+		float offsetAngle = acosf((d - attackDist - moveSpeed) / (2*moveSpeed));
 		float centerAngle = atan2(other - *this);
 		addAngleSweepPoints<false>(centerAngle, offsetAngle, strength, currentStrength);
 
@@ -159,24 +158,24 @@ void MySpirit::safeMove(const Position& targetPosition) {
 	for (auto& outpost : outposts) {
 		if (outpost.energy <= 0)
 			continue;
-		float attackDist = outpost.range - (outpost.isFriendly() ? 200 : 0) + F_EPS;
+		float attackDist = outpost.range - (outpost.isFriendly() ? range : 0) + F_EPS;
 		float d = dist(outpost, *this);
 
-		if (d >= attackDist + MAX_MOVE_DIST)
+		if (d >= attackDist + moveSpeed)
 			continue; // never in range
 		
 		float strength = outpost.strength();
 		if (!outpost.isFriendly())
 			currentStrength -= strength;
 			
-		if (d <= attackDist - MAX_MOVE_DIST) {
+		if (d <= attackDist - moveSpeed) {
 			if (outpost.isFriendly())
 				currentStrength += strength;
 			continue; // always in range
 		}
 
 		// angular sweep point
-		float offsetAngle = acosf((d - attackDist - MAX_MOVE_DIST) / (2*MAX_MOVE_DIST));
+		float offsetAngle = acosf((d - attackDist - moveSpeed) / (2*moveSpeed));
 		float centerAngle = atan2(outpost - *this);
 		if (outpost.isFriendly())
 			addAngleSweepPoints<true>(centerAngle, offsetAngle, strength, currentStrength);
@@ -204,7 +203,7 @@ void MySpirit::safeMove(const Position& targetPosition) {
 		return a.distance < b.distance;
 	});
 
-	static constexpr float TARGET_WEIGHT = -0.1f / (2*MAX_MOVE_DIST);
+	static constexpr float TARGET_WEIGHT = -0.1f / (2*moveSpeed);
 	auto scoreFn = [&](float strength, Position& pos) {
 		return std::min(0.f, strength) + TARGET_WEIGHT * dist(pos, targetPosition);
 	};
@@ -218,7 +217,7 @@ void MySpirit::safeMove(const Position& targetPosition) {
 		if (it->type == SweepPointType::Add)
 			currentStrength += it->strength;
 
-		auto nextPos = *this + MAX_MOVE_DIST * fromAngle(it->angle);
+		auto nextPos = *this + moveSpeed * fromAngle(it->angle);
 		float score = scoreFn(currentStrength, nextPos);
 		if (score > bestScore) {
 			bestScore = score;
@@ -231,7 +230,7 @@ void MySpirit::safeMove(const Position& targetPosition) {
 			strengthTowardsTarget = currentStrength;
 		}
 	}
-	Position bestPosition = *this + (MAX_MOVE_DIST + F_EPS) * fromAngle(bestSweepPoint->angle);
+	Position bestPosition = *this + (moveSpeed + F_EPS) * fromAngle(bestSweepPoint->angle);
 
 	// sweep over all line intersections
 	currentStrength = strengthTowardsTarget;
