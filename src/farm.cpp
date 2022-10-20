@@ -13,102 +13,150 @@
 
 
 
-int tippingPoint(int numChains, int travelTime, Star& star) {
-	float perfectEfficiency = 10.f / (10 * numChains + 2 * (10 + travelTime));
-	int starEnergyProduction = 3 + (int)std::roundf(star.energyCapacity / 100.f);
-	float e = (starEnergyProduction - 3) * 100 - 50;
-	int f = starEnergyProduction * numChains + (int)ceilf((float)starEnergyProduction / 10 * 2 * (10 + travelTime));
-	float baseE = 0;
+float farmEfficiency(int numChains, int travelTime) {
+	return 10.f / (10 * numChains + 2 * (10 + travelTime)); // ideal case, energy harvested per spirit per tick
+}
+float farmEfficiency(ChargeTarget& target, Star& star) {
+	Position P2B = star + normalize(target - star) * 199.9f;;
+	float P2BsDist = dist(target, P2B);
+	int numChains = ceilf((P2BsDist - 19.9f * 6) / 199.9f - 1);
+	int travelTime = std::max((int)ceilf((P2BsDist - 199.9f * (1 + numChains)) / 19.9f) - 1, 0);
+	return farmEfficiency(numChains, travelTime);
+}
 
-	while (e > star.energy) {
-		float farmConsumption = perfectEfficiency * f;
-		starEnergyProduction = 3 + (int)std::roundf((e - starEnergyProduction + farmConsumption) / 100.f);
-		e -= starEnergyProduction;
-		e += farmConsumption;
-		baseE -= farmConsumption;
-		if (baseE <= 0) {
-			baseE += 50;
-			f--;
-		}
-		// println("%i %f %f %i", f, e, f * perfectEfficiency, starEnergyProduction);
+
+int tippingPoint(float farmEfficiency, Base* base, Star& star, bool greedy) {
+	// start off at max energy and simulate backwards
+
+	if (greedy || base == nullptr) {
+		int starEnergyProduction = star.energyGenFlat + (int)std::roundf(star.energy * star.energyGenScaling);
+		return starEnergyProduction / farmEfficiency;
 	}
 
-	return f;
+	int starEnergyProduction = star.energyGenFlat + (int)std::roundf(star.energyCapacity * star.energyGenScaling);
+	int farmers = starEnergyProduction / farmEfficiency / shapeSize(base->shape); // number of farmers needed to harvest the full energy production
+	float energy = star.energyCapacity - base->spiritCost(farmers);
+	float spawnEnergy = 0;
+
+	while (energy > star.energy) {
+		float farmConsumption = farmEfficiency * farmers * shapeSize(base->shape);
+		starEnergyProduction = star.energyGenFlat + (int)std::roundf((energy - starEnergyProduction + farmConsumption) * star.energyGenScaling);
+		energy -= starEnergyProduction;
+		energy += farmConsumption;
+		spawnEnergy -= farmConsumption;
+		if (spawnEnergy <= 0) { // a unit had spawned, simulate in reverse
+			farmers--;
+			spawnEnergy += base->spiritCost(farmers);
+		}
+		// println("%i %f %f %i", farmers, energy, farmers * perfectEfficiency, starEnergyProduction);
+	}
+	// println("max %i farmers", farmers);
+	return farmers;
 }
 
 
 
-int loss1 = 0, loss2 = 0;
-void farmStar(std::vector<MySpirit*>& farmers, Star& star, bool preserve) {
-	if (available.size() <= 0)
+float greedyStrength(Shape& shape) {
+	switch (shape) {
+	default:
+	case Shape::CIRCLE:
+		return 250.f;
+	case Shape::SQUARE:
+		return 100.f;
+	case Shape::TRIANGLE:
+		return 230.f;
+	}
+}
+
+
+struct BaseStar {
+	Star* star;
+	ChargeTarget* base;
+	float prio;
+	std::vector<MySpirit*> closestSpirits;
+};
+
+void farmPair(std::vector<MySpirit*>& farmers, BaseStar& pair, bool greedy) {
+	if (farmers.size() <= 0) {
+		println("pair %s -> %s, 0/0 (%i) prio %f", pair.star->name(), pair.base->name(), available.size(), pair.prio);
 		return;
+	}
+
+	auto& star = *pair.star;
+	auto& target = *pair.base;
 
 	Position P2B;
 	Outpost& outpost = outposts[0];
-	// println("%i %i %i", dist(outpost, star) <= outpost.range, outpost.energy, outpost.isFriendly());
 	float oRange = outpost.range + .1f;
 	if (dist(outpost, star) <= oRange && outpost.energy > 0 && !outpost.isFriendly()) {
 		auto os = star - outpost;
 		float d = norm(os);
-		if (d + 199.9f <= oRange)
+		if (d + 199.9f <= oRange) {
+			println("pair %s -> %s, 0/0 (%i) prio %f", pair.star->name(), pair.base->name(), available.size(), pair.prio);
 			return;
+		}
 		auto proj = os * (oRange*oRange - 199.9f*199.f - dot(os, os)) / (2 * dot(os, os));
-		auto orth = sqrtf(199.9f*199.9f - dot(proj, proj)) * rot90(normalize(os), bases[0] - star);
+		auto orth = sqrtf(199.9f*199.9f - dot(proj, proj)) * rot90(normalize(os), target - star);
 		P2B = star + proj + orth;
 	} else
-		P2B = star + normalize(bases[0] - star) * 199.9f;
+		P2B = star + normalize(target - star) * 199.9f;
 
-	float P2BsDist = dist(bases[0], P2B);
+	float P2BsDist = dist(target, P2B);
 
 	int numChains = ceilf((P2BsDist - 19.9f * 6) / 199.9f - 1);
 
 	int travelTime = std::max((int)ceilf((P2BsDist - 199.9f * (1 + numChains)) / 19.9f) - 1, 0);
 
-
-	auto bP2BNorm = normalize(bases[0] - P2B);
+	auto bP2BNorm = normalize(target - P2B);
 	auto P2A = P2B + bP2BNorm * 19.9f * (1 + travelTime);
 	auto P1 = P2A + bP2BNorm * 199.9f;
 
 	float farmer2CycleTime = 2.f * (10 + travelTime);
 	float perfectEfficiency = 10.f / (10 * numChains + farmer2CycleTime);
+	constexpr float MAX_WORKERS_PER_REMAINING_ENERGY = 0.02f;
 
-	int starEnergyProduction = 3 + (int)std::roundf(star.energy / 100.f);
-	int maxFarmers = starEnergyProduction * numChains + (int)ceilf((float)starEnergyProduction / 10 * 2 * (10 + travelTime));
-	if (preserve)
-		maxFarmers = std::min(maxFarmers, tippingPoint(numChains, travelTime, star));
-	int farmerCount = std::min<int>(maxFarmers, available.size());
-	auto farmersEnd = available.begin() + farmerCount;
-	println("dist: %f, numChains: %i, travelTime: %i, farmers: %i/%i%s", P2BsDist + 199.9f, numChains, travelTime, farmerCount, maxFarmers, preserve ? "p" : "");
-	if (farmerCount <= 0)
+	int starEnergyProduction = star.energyGenFlat + (int)std::roundf(star.energy * star.energyGenScaling);
+	int maxFarmersDeplete = tippingPoint(farmEfficiency(numChains, travelTime), target.type == Base::TYPE ? static_cast<Base*>(pair.base) : nullptr, star, greedy);
+	int maxFarmersEnergy = target.type != Base::TYPE && target.controlledBy == myPlayerId ? std::ceilf((target.energyCapacity - target.energy) / perfectEfficiency * MAX_WORKERS_PER_REMAINING_ENERGY) : 9999999;
+	int maxFarmers = std::min<int>({ maxFarmersDeplete, maxFarmersEnergy });
+	int farmerCount = std::min<int>(maxFarmers, farmers.size());
+	// println("max: dep: %i lim: %i (%i %i) cnt %i", maxFarmersDeplete, maxFarmersEnergy, farmers.size());
+	auto farmersEnd = farmers.begin() + farmerCount;
+	if (farmerCount <= 0) {
+		println("pair %s -> %s, 0/0 (%i) prio %f", pair.star->name(), pair.base->name(), available.size(), pair.prio);
 		return;
-
-	std::sort(available.begin(), farmersEnd, [&](auto*& a, auto*& b){
-		return a->db - dist(star, *a) < b->db - dist(star, *b);
+	}
+		
+	std::partial_sort(farmers.begin(), farmersEnd, farmers.end(), [&](auto*& a, auto*& b) {
+		return dist(*a, target) + dist(star, *a) < dist(*b, target) + dist(*b, star);
 	});
 
-	for (auto it = available.begin(); it < farmersEnd; it++)
-		(*it)->shout("🚜");
+	std::sort(farmers.begin(), farmersEnd, [&](auto*& a, auto*& b){
+		return dist(*a, target) - dist(star, *a) < dist(*b, target) - dist(*b, star);
+	});
 
+	// for (auto it = farmers.begin(); it < farmersEnd; it++)
+	// 	(*it)->shout("🚜");
 
-	auto farmers1End = available.begin();
+	auto farmers1End = farmers.begin();
 	int count1;
 	Position haulA, targetA;
-	if (available.size() < 3 || (farmerCount == 3 && bases[0].energy <= 1.8 * farmers[0]->energyCapacity)) {
+	if (farmers.size() < 3 || (farmerCount == 3 && target.energy <= 1.8 * farmers[0]->energyCapacity)) {
 		haulA = P1;
-		targetA = bases[0];
+		targetA = target;
 		count1 = 0;
 	} else {
 		haulA = P2A;
 		targetA = P1;
 
-		if (currentTick < 14)
+		if (currentTick < 14 && numChains > 0) {
 			count1 = farmerCount / 2 / numChains;
-		else {
+		} else {
 			count1 = std::max(1, (int)std::roundf(farmerCount * perfectEfficiency)) * numChains;
 
 			int oldCount1 = 0;
 			for (; oldCount1 < farmerCount; oldCount1++)
-				if (farmers[oldCount1]->db - dist(star, *farmers[oldCount1]) > -P2BsDist + 200)
+				if (dist(*farmers[oldCount1], target) - dist(star, *farmers[oldCount1]) > -P2BsDist + 200)
 					break;
 			int oldCount2 = farmerCount - oldCount1;
 			if (oldCount2 > farmerCount - count1 && farmerCount != maxFarmers)
@@ -121,12 +169,12 @@ void farmStar(std::vector<MySpirit*>& farmers, Star& star, bool preserve) {
 	
 
 	// sort groups that have the same distance to base by energy
-	for (auto tIt = available.begin(); tIt < farmersEnd; tIt++) {
+	for (auto tIt = farmers.begin(); tIt < farmersEnd; tIt++) {
 		auto sIt = tIt;
 		auto*& s = *sIt;
 		while (tIt < farmersEnd) {
 			auto *& t = *tIt;
-			if (s->db + 5 <= t->db)
+			if (dist(*s, target) + 5 <= dist(*t, target))
 				break;
 			tIt++;
 		}
@@ -135,20 +183,20 @@ void farmStar(std::vector<MySpirit*>& farmers, Star& star, bool preserve) {
 		});
 	}
 
-	auto tStartIt = available.begin();
-	for (auto sIt = available.begin(); sIt < farmersEnd; sIt++) {
+	auto tStartIt = farmers.begin();
+	for (auto sIt = farmers.begin(); sIt < farmersEnd; sIt++) {
 		auto*& s = *sIt;
-		// if (s->db < 220)
-		// 	println("%i %f", s->usedEnergize, s->db);
+		// if (dist(*s, target) < 220)
+		// 	println("%i %f", s->usedEnergize, dist(*s, target));
 		if (s->usedEnergize)
 			continue;
-		if (s->energy > 0 && s->db <= 200) {
-			s->energizeBase(bases[0]);
+		if (s->energy > 0 && dist(*s, target) <= 200 && target.energy < target.energyCapacity) {
+			s->energize(target);
 		} else if (s->energy + s->size <= s->energyCapacity && dist(star, *s) <= 200)
 			s->charge(star);
 		else {
 			while (tStartIt < sIt) {
-				if ((*tStartIt)->db + 200 >= s->db)
+				if (dist(**tStartIt, target) + 200 >= dist(*s, target))
 					break;
 				tStartIt++;
 			}
@@ -166,10 +214,10 @@ void farmStar(std::vector<MySpirit*>& farmers, Star& star, bool preserve) {
 				// find swap to maintain energy order
 				auto kIt = tIt + 2;
 				for (; kIt < farmersEnd; kIt++)
-					if ((*kIt)->energy >= t->energy || t->db + 5 <= (*kIt)->db)
+					if ((*kIt)->energy >= t->energy || dist(*t, target) + 5 <= dist(**kIt, target))
 						break;
 				auto*& k = *--kIt;
-				if (k->energy < t->energy && t->db + 5 > k->db)
+				if (k->energy < t->energy && dist(*t, target) + 5 > dist(*k, target))
 					std::iter_swap(tIt, kIt);
 				break;
 			}
@@ -177,15 +225,15 @@ void farmStar(std::vector<MySpirit*>& farmers, Star& star, bool preserve) {
 	}
 
 	if (count1 != 0) {
-		auto f1it = available.begin();
+		auto f1it = farmers.begin();
 		for (int i = 0; i < numChains; i++) {
-			auto transferTo = i == 0 ? bases[0] : P1 + (numChains - i) * 199.9f * bP2BNorm;
+			auto transferTo = i == 0 ? target : P1 + (numChains - i) * 199.9f * bP2BNorm;
 			auto afkPoint = P1 + (numChains - i - 1) * 199.9f * bP2BNorm;
 			for (; f1it < farmers1End - count1 * (numChains - i - 1) / numChains; f1it++) {
 				auto* s = *f1it;
 				
 				if (!s->usedMove)
-					s->move(dist(transferTo, *s) > 200 ? inDirection(transferTo, *s, 199.9f) : afkPoint);
+					s->safeMove(dist(transferTo, *s) > 200 ? inDirection(transferTo, *s, 199.9f) : afkPoint);
 			}
 		}
 	}
@@ -197,42 +245,111 @@ void farmStar(std::vector<MySpirit*>& farmers, Star& star, bool preserve) {
 
 		if (!s->usedMove) {
 			if (s->energy == 0 || (s->energy < s->energyCapacity && (dist(star, *s) <= 200 || d2a > s->energy * 20))) {
-				s->move(dist(star, *s) > 200 && s->energy > 0 ? inDirection(star, *s, 199.9f) : P2B);
+				s->safeMove(dist(star, *s) > 200 && s->energy > 0 ? inDirection(star, *s, 199.9f) : P2B);
 			} else {
 				bool tempf1 = false;
-				if (s->energy != 0 && s->db <= 200 && farmers1End == available.begin()) {
+				if (s->energy != 0 && dist(*s, target) <= 200 && farmers1End == farmers.begin()) {
 					tempf1 = true;
-					for (auto j = available.begin(); j < farmers1End; j++)
+					for (auto j = farmers.begin(); j < farmers1End; j++)
 						if (dist(*s, **j) <= 200) {
 							tempf1 = false;
 							break;
 						}
 				}
 				if (tempf1)
-					s->move(inDirection(bases[0], star, 199.9f));
+					s->safeMove(inDirection(target, star, 199.9f));
 				else
-					s->move(dist(*s, targetA) > 200 && s->energy > 0 ? inDirection(targetA, *s, 199.9f) : haulA);
+					s->safeMove(dist(*s, targetA) > 200 && s->energy > 0 ? inDirection(targetA, *s, 199.9f) : haulA);
 			}
 		}
 	}
+			
+	println("pair %s -> %s, %i/%i (%i) prio %f", pair.star->name(), pair.base->name(), farmerCount, maxFarmers, available.size(), pair.prio);
+
 	
-	available.erase(available.begin(), farmersEnd);
-	// println("loss1: %i loss2: %i", loss1, loss2);
+	farmers.erase(farmers.begin(), farmersEnd);
 }
 
 
 
 
-void farm() {
-	std::sort(available.begin(), available.end(), [&](auto*& a, auto*& b) {
-		return dist(stars[0], *a) - dist(stars[1], *a) - a->db < dist(stars[0], *b) - dist(stars[1], *b) - b->db;
-	});
-	farmStar(available, stars[0], stars[1].activatesIn <= 0);
-	
-	std::sort(available.begin(), available.end(), [&](auto*& a, auto*& b) {
-		return dist(stars[1], *a) - a->db < dist(stars[1], *b) - b->db;
-	});
-	farmStar(available, stars[1], false);
 
-	// farmStar(available, stars[2], false);
+constexpr float OUTPOST_OVER_BASE_PREFERENCE = 1.3f;
+
+std::vector<BaseStar> baseStarPairs{};
+void farm() {
+
+	baseStarPairs.clear();
+	baseStarPairs.reserve(stars.size());
+	for (auto& star : stars) {
+		baseStarPairs.emplace_back();
+		auto& pair = baseStarPairs.back();
+		pair.star = &star;
+		
+		float closestBaseDist = std::numeric_limits<float>::max();
+		for (auto& base : bases) {
+			float d = dist(base, star) * OUTPOST_OVER_BASE_PREFERENCE;
+			if (d < closestBaseDist) {
+				closestBaseDist = d;
+				pair.base = &base;
+			}
+		}
+
+		pair.prio = farmEfficiency(*pair.base, *pair.star);
+	}
+	
+	for (auto& outpost : outposts) {
+		baseStarPairs.emplace_back();
+		auto& pair = baseStarPairs.back();
+		pair.base = &outpost;
+		
+		float closestBaseDist = std::numeric_limits<float>::max();
+		for (auto& star : stars) {
+			float d = dist(outpost, star);
+			if (d < closestBaseDist) {
+				closestBaseDist = d;
+				pair.star = &star;
+			}
+		}
+
+		pair.prio = farmEfficiency(*pair.base, *pair.star) * OUTPOST_OVER_BASE_PREFERENCE;
+	}
+
+	auto assignSpriritsToClosestPair = [&](std::vector<MySpirit*> spirits) {
+		for (auto& s : spirits) {
+			BaseStar* closestPair = nullptr;
+			float closestPairDist = std::numeric_limits<float>::max();
+			for (auto& pair : baseStarPairs) {
+				float d = (dist(*pair.base, *s) + dist(*pair.star, *s)) / pair.prio;
+				if (d < closestPairDist) {
+					closestPairDist = d;
+					closestPair = &pair;
+				}
+			}
+			closestPair->closestSpirits.push_back(s);
+		}
+	};
+
+
+	bool greedy = myStrength < greedyStrength(units[0].shape);
+	println("strength: %f lim: %f", myStrength, greedyStrength(units[0].shape));
+ 
+	assignSpriritsToClosestPair(available);
+	while (baseStarPairs.size() > 0) {
+		std::sort(baseStarPairs.begin(), baseStarPairs.end(), [](const BaseStar& a, const BaseStar& b) { // most spirits at the end
+			return a.closestSpirits.size() < b.closestSpirits.size();
+		});
+		auto pair = std::move(baseStarPairs.back());
+		baseStarPairs.pop_back();
+
+		if (pair.base->controlledBy == myPlayerId || pair.base->energy == 0)
+			farmPair(pair.closestSpirits, pair, greedy);
+
+		if (baseStarPairs.size() > 0)
+			assignSpriritsToClosestPair(pair.closestSpirits);
+		else
+			available = std::move(pair.closestSpirits);
+	}
+
+	println("%d spirits remaining", available.size());
 }

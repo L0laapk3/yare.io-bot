@@ -19,3 +19,4 @@ float atan2(const Position& u);
 Position fromAngle(const float angle);
 Position rot90(const Position& u);
 Position rot90(const Position& u, const Position& dir);
+Position proj(const Position& u, const Position& v);
